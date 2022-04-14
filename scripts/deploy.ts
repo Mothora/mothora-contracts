@@ -5,9 +5,6 @@ import { CharacterNFT2 } from "../typechain-types";
 async function main() {
     let character: CharacterNFT2;
 
-    const signers = await ethers.getSigners();
-    console.log({ Signer0: signers[0].address });
-    
     const CharacterFactory = await ethers.getContractFactory("CharacterNFT2");
     character = await CharacterFactory.deploy();
     await character.deployed();
