@@ -4,7 +4,11 @@
   "description": "this is a hardhat template",
   "main": "hardhat.config.ts",
   "scripts": {
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "local": "npx hardhat run --network hardhatevm scripts/deploy.ts",
+    "rinkeby": "npx hardhat run --network rinkeby scripts/deploy.ts",
+    "node": "npx hardhat node",
+    "compile": "npx hardhat compile"
   },
   "keywords": [
     "hardhat",

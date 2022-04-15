@@ -2,20 +2,36 @@
 pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-contract PlayerContract is ERC721 {
+import {CharacterNFT2} from "./CharacterNFT2.sol";
+contract PlayerContract is CharacterNFT2 {
     //===============Storage===============
 
     //===============Events================
 
     //===============Variables=============
 
+    mapping (address => Player) players;
     struct Player {
-        address playerAddress;
         string faction;
         uint256 nrVaultParts;
-        uint256 CharacterTokenID;
+        bytes characterNFTData; //CharacterNFTId
+    }
+    
+    //===============Functions=============
+
+    function JoinFaction(string memory _faction) external {
+        players[msg.sender].faction = _faction;
     }
 
-    //===============Functions=============
-    constructor() ERC721("Characters", "CHAs") {}
+    function Defect(string memory _newfaction) external {
+        players[msg.sender].faction = _newfaction;
+        players[msg.sender].nrVaultParts = 0;
+    }
+
+    function SelectCharacter(bytes memory _blueprint) external {
+        CharacterNFT2.mintNFT(_blueprint);
+        players[msg.sender].characterNFTData = tokenURI(CharacterNFT2._tokenIds.current());
+    }
+
+
 }   

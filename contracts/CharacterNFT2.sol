@@ -22,7 +22,8 @@ contract CharacterNFT2 is ERC721, Ownable {
     //===============Functions=============
     constructor() ERC721("Characters", "CHAs") {}
 
-    function mintNFT(bytes calldata _blueprint) external onlyOwner {
+    function mintNFT(bytes calldata _blueprint) external {
+        require(balanceOf(msg.sender) < 1, "CANNOT_MINT_MORE_THAN_1");
         _tokenIds.increment();
         uint256 currentId = _tokenIds.current();
         
@@ -34,12 +35,6 @@ contract CharacterNFT2 is ERC721, Ownable {
         _mint(msg.sender, currentId);
     }
 
-    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-        string memory baseUri = BASE_URI;
-        string memory coreCID = string(abi.encodePacked(CID_PREFIX, _metadata[_tokenId]));
-        return bytes(baseUri).length > 0 ? string(abi.encodePacked(baseUri, coreCID)) : "";
-    }
-
     function updateNFTMetadata(uint256 _tokenId, bytes calldata _blueprint) external {
         uint256 blueprintOffset = _blueprint.length - 32;
         bytes32 blueprint32 = LibUtils.bytesToBytes32Left(_blueprint, blueprintOffset);
@@ -49,5 +44,11 @@ contract CharacterNFT2 is ERC721, Ownable {
 
     function getNFTMetadata(uint256 tokenId) external view returns (string memory) {
         return (_metadata[tokenId]);
+    }
+
+    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+        string memory baseUri = BASE_URI;
+        string memory coreCID = string(abi.encodePacked(CID_PREFIX, _metadata[_tokenId]));
+        return bytes(baseUri).length > 0 ? string(abi.encodePacked(baseUri, coreCID)) : "";
     }
 }
