@@ -13,22 +13,33 @@ contract CharacterNFT2 is ERC721, Ownable {
     //===============Variables=============
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
+    Counters.Counter private _NFTsAllowed;
 
     string internal constant BASE_URI = "ipfs://";
     string private constant CID_PREFIX = "f01701220";
 
     mapping(uint256 => string) private _metadata;
 
+    bytes[] AllowedNFTids;
+
     //===============Functions=============
     constructor() ERC721("Characters", "CHAs") {}
 
-    function mintNFT(bytes calldata _blueprint) external {
-        require(balanceOf(msg.sender) < 1, "CANNOT_MINT_MORE_THAN_1");
+    function addAllowedNFT(bytes calldata _blueprint) external onlyOwner {
+        _NFTsAllowed.increment();
+        AllowedNFTids[_NFTsAllowed.current()] = _blueprint;
+    }
+
+    function removeAllowedNFT(uint _blueprintindex) external onlyOwner {
+        AllowedNFTids[_blueprintindex] = "0";
+    }
+
+    function mintNFT(uint _blueprintindex) internal {
         _tokenIds.increment();
         uint256 currentId = _tokenIds.current();
         
-        uint256 blueprintOffset = _blueprint.length - 32;
-        bytes32 blueprint32 = LibUtils.bytesToBytes32Left(_blueprint, blueprintOffset);
+        uint256 blueprintOffset = AllowedNFTids[_blueprintindex].length - 32;
+        bytes32 blueprint32 = LibUtils.bytesToBytes32Left(AllowedNFTids[_blueprintindex], blueprintOffset);
         string memory blueprintAsString = LibUtils.toHex(blueprint32);
         _metadata[currentId] = blueprintAsString;
 
