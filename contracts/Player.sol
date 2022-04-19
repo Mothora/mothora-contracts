@@ -82,4 +82,12 @@ contract PlayerContract is CharacterNFT2 {
         uint randomHash = uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty)));
         return randomHash % 1000;
     } 
+
+    function getFaction() external view returns (string memory) {
+        return players[msg.sender].faction;
+    }
+
+    function getMultiplier() external view returns (uint) {
+        return players[msg.sender].multiplier;
+    }
 }   
