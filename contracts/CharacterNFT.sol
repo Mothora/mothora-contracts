@@ -7,16 +7,26 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
 contract CharacterNFT is ERC721URIStorage, Ownable {
+    //===============Storage===============
+
+    //===============Events================
+
+    //===============Variables=============
+    
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
+    //===============Functions=============
     constructor() ERC721("CharacterNFT", "NFT") {}
 
-    function mintCharacter(string memory exampletokenURI) public onlyOwner {
-        _tokenIds.increment();
-        uint256 newItemId = _tokenIds.current();
+    function mintNFT(address recipient, string memory tokenURI) public onlyOwner returns (uint256) {
+            _tokenIds.increment();
 
-        _mint(msg.sender, newItemId);
-        _setTokenURI(newItemId, exampletokenURI); // tokenURI example = "ipfs://QmYueiuRNmL4MiA2GwtVMm6ZagknXnSpQnB3z2gWbz36hP"
+            uint256 newItemId = _tokenIds.current();
+            _mint(recipient, newItemId);
+            _setTokenURI(newItemId, tokenURI);
+
+            return newItemId;
+        
     }
 }
