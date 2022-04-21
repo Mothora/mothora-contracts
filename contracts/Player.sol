@@ -2,8 +2,8 @@
 pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {CharacterNFT2} from "./CharacterNFT2.sol";
-contract PlayerContract is CharacterNFT2 {
+import {GameItems} from "./GameItems.sol";
+contract PlayerContract is GameItems {
     //===============Storage===============
 
     //===============Events================
@@ -39,9 +39,9 @@ contract PlayerContract is CharacterNFT2 {
         players[msg.sender].multiplier = 0;
     }
 
-    function MintCharacter(uint _blueprintindex) external {
+    function MintCharacter(uint _indexposition) external {
         require(keccak256(abi.encodePacked(players[msg.sender].faction)) != keccak256(abi.encodePacked("")), "This Player has no faction yet.");
-        CharacterNFT2.mintNFT(_blueprintindex);
+
         players[msg.sender].playerHasMintedCharacter = true;
     }
 

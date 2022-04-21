@@ -15,18 +15,29 @@ contract CharacterNFT is ERC721URIStorage, Ownable {
     
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
+    Counters.Counter private _NFTsAllowed;
+
+    string[] AllowedNFTs;
 
     //===============Functions=============
     constructor() ERC721("CharacterNFT", "NFT") {}
 
-    function mintNFT(address recipient, string memory tokenURI) public onlyOwner returns (uint256) {
+    function addAllowedNFT(string memory exampletokenURI) external onlyOwner {
+        _NFTsAllowed.increment();
+        AllowedNFTs[_NFTsAllowed.current()] = exampletokenURI;
+    }
+
+    function removeAllowedNFT(uint indexposition) external onlyOwner {
+        AllowedNFTs[indexposition] = "";
+    }
+
+    function mintNFT(string memory exampletokenURI) internal returns (uint256) {
             _tokenIds.increment();
 
             uint256 newItemId = _tokenIds.current();
-            _mint(recipient, newItemId);
-            _setTokenURI(newItemId, tokenURI);
+            _mint(msg.sender, newItemId);
+            _setTokenURI(newItemId, exampletokenURI);
 
             return newItemId;
-        
     }
 }

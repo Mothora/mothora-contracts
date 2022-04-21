@@ -31,7 +31,7 @@ contract CharacterNFT2 is ERC721, Ownable {
     }
 
     function removeAllowedNFT(uint _blueprintindex) external onlyOwner {
-        AllowedNFTids[_blueprintindex] = "0";
+        AllowedNFTids[_blueprintindex] = "";
     }
 
     function mintNFT(uint _blueprintindex) internal {

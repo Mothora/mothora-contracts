@@ -1,16 +1,17 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { CharacterNFT } from "../typechain-types";
+import { GameItems } from "../typechain-types";
 
 async function main() {
-    let character: CharacterNFT;
+    let gameitems: GameItems;
 
-    const CharacterFactory = await ethers.getContractFactory("CharacterNFT");
-    character = await CharacterFactory.deploy();
-    await character.deployed();
-    console.log({ "Character contract deployed to": character.address });
+    const GameItemsFactory = await ethers.getContractFactory("GameItems");
+    gameitems = await GameItemsFactory.deploy();
+    await gameitems.deployed();
+    console.log({ "GameItems contract deployed to": gameitems.address });
 
-    // await character.mintNFT("0xaa2Cd8976412FC5303788Df013B8F0aD6b05D55a", "ipfs://QmYueiuRNmL4MiA2GwtVMm6ZagknXnSpQnB3z2gWbz36hP");
+    await gameitems.setTokenUri(3,"https://bafybeihul6zsmbzyrgmjth3ynkmchepyvyhcwecn2yxc57ppqgpvr35zsq.ipfs.dweb.link/3.json")
+    await gameitems.mint(3, 1);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
