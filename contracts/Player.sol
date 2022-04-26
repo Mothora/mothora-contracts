@@ -10,9 +10,11 @@ contract PlayerContract is Ownable {
 
     //===============Variables=============
 
+    enum Faction {NONE, VAHNU, CONGLOMERATE, DOC}
+    uint256[] public totalFactionMembers;
 
     struct Player {
-        string faction;
+        Faction faction;
         uint256 timelock;
         bool characterFullofRewards;
         uint256 multiplier;
@@ -20,35 +22,54 @@ contract PlayerContract is Ownable {
     
     mapping (address => Player) players;
 
-    GameItems GameItemsContract;  
-
+    GameItems GameItemsContract;
+    
     //===============Functions=============
 
     function setGameItems(address _gameitemsaddress) external onlyOwner {
         GameItemsContract = GameItems(_gameitemsaddress);
     }
 
-    function JoinFaction(string memory _faction) external {
-        require(keccak256(abi.encodePacked(_faction)) == keccak256(abi.encodePacked("VAHNU"))|| keccak256(abi.encodePacked(_faction)) == keccak256(abi.encodePacked("CONGLOMERATE")) || keccak256(abi.encodePacked(_faction)) == keccak256(abi.encodePacked("DISCIPLESOFCHAOS")), "Please select a valid faction.");
-        players[msg.sender].faction = _faction;
+    function JoinFaction(uint _faction) external {
+        require(players[msg.sender].faction == Faction.NONE, "This player already has a faction.");
+        require(_faction == 1 || _faction == 2 || _faction == 3, "Please select a valid faction.");
+        if (_faction == 1) {
+            players[msg.sender].faction = Faction.VAHNU;
+            totalFactionMembers[1] = totalFactionMembers[1] + 1;
+        } else if (_faction == 2) {
+            players[msg.sender].faction = Faction.CONGLOMERATE;
+            totalFactionMembers[2] = totalFactionMembers[2] + 1;
+        } else if (_faction == 3) {
+            players[msg.sender].faction = Faction.DOC;
+            totalFactionMembers[3] = totalFactionMembers[3] + 1;
+        }
     }
 
-    function Defect(string memory _newfaction) external {
-        require(keccak256(abi.encodePacked(_newfaction)) == keccak256(abi.encodePacked("VAHNU"))|| keccak256(abi.encodePacked(_newfaction)) == keccak256(abi.encodePacked("CONGLOMERATE")) || keccak256(abi.encodePacked(_newfaction)) == keccak256(abi.encodePacked("DISCIPLESOFCHAOS")), "Please select a valid faction.");
-        require(keccak256(abi.encodePacked(_newfaction)) != keccak256(abi.encodePacked(players[msg.sender].faction)), "The Player cannot defect to the same faction.");
-        players[msg.sender].faction = _newfaction;
-        players[msg.sender].nrVaultParts = 0;
-        players[msg.sender].multiplier = 0;
+    function Defect(uint _newfaction) external {
+        require(_newfaction == 1 || _newfaction == 2 || _newfaction == 3, "Please select a valid faction.");
+        uint256 currentfaction = getFaction(msg.sender);
+        totalFactionMembers[currentfaction] = totalFactionMembers[currentfaction] - 1;
+        if (_newfaction == 1 && players[msg.sender].faction != Faction.VAHNU) {
+            players[msg.sender].faction = Faction.VAHNU;
+            totalFactionMembers[1] = totalFactionMembers[1] + 1;
+        } else if (_newfaction == 2 && players[msg.sender].faction != Faction.CONGLOMERATE) {
+            players[msg.sender].faction = Faction.CONGLOMERATE;
+            totalFactionMembers[2] = totalFactionMembers[2] + 1;
+        } else if (_newfaction == 3 && players[msg.sender].faction != Faction.DOC) {
+            players[msg.sender].faction = Faction.DOC;
+            totalFactionMembers[3] = totalFactionMembers[3] + 1;
+        }
+        // TODO burn all vault part NFTs this wallet has on it. 
     }
 
     function MintCharacter(uint256 _id) external {
-        require(keccak256(abi.encodePacked(players[msg.sender].faction)) != keccak256(abi.encodePacked("")), "This Player has no faction yet.");
-        require(GameItemsContract.balanceOf(msg.sender, _id) == 0, "The Player can only mint 1 Character of each type");
+        require(players[msg.sender].faction != Faction.NONE, "This Player has no faction yet.");
+        require(GameItemsContract.balanceOf(msg.sender, _id) == 0, "The Player can only mint 1 Character of each type.");
         GameItemsContract.mintCharacter(msg.sender,_id);
     }
 
-    function GoOnQuest() external {
-        require(players[msg.sender].playerHasMintedCharacter = true, "You need to mint a Character first.");
+    function GoOnQuest(uint256 _id) external {
+        require(GameItemsContract.balanceOf(msg.sender, _id) == 1, "The Player does not own a character of this type.");
         require(players[msg.sender].timelock < block.timestamp, "The Player is already on a quest.");
         players[msg.sender].timelock = block.timestamp + 2 minutes;
         players[msg.sender].characterFullofRewards = true;
@@ -85,11 +106,13 @@ contract PlayerContract is Ownable {
         return randomHash % 1000;
     } 
 
-    function getFaction() external view returns (string memory) {
-        return players[msg.sender].faction;
+    function getFaction(address _recipient) public view returns (uint256) {
+        require(players[_recipient].faction != Faction.NONE, "This Player has no faction yet.");
+        return uint256(players[_recipient].faction);
     }
 
-    function getMultiplier() external view returns (uint) {
-        return players[msg.sender].multiplier;
+    function getMultiplier(address _recipient) external view returns (uint) {
+        require(players[_recipient].faction != Faction.NONE, "This Player has no faction yet.");
+        return players[_recipient].multiplier;
     }
 }   

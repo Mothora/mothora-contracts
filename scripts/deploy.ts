@@ -22,7 +22,7 @@ async function main() {
     // Create a way to access the GameItems contract functions on PlayerContract without inheriting it (Creates an instance of a contract on anothercontract)
     await player.setGameItems(gameitems.address);
 
-    await player.Mint();
+    await player.MintCharacter(0);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

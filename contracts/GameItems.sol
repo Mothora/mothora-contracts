@@ -19,32 +19,33 @@ contract GameItems is ERC1155, Ownable {
     uint256 public constant BLACKSOLDIER = 0;
     uint256 public constant VAULTPARTS = 1;
 
-    address immutable PlayerContract;
+    address public playerContractAddress;
 
     //===============Functions=============
 
     // To translate CIDv0 (Qm) to CIDv1 (ba) use this website: https://cid.ipfs.io/
     // constructor() ERC1155("https://bafybeif257x7rsniq477knwmrl7cx57zqu2jmo2tjm7re5mb4hlxrypjki.ipfs.dweb.link/{id}.json") {}
 
-    constructor(string memory _initialfolder, address _playerContract) ERC1155(string(abi.encodePacked(_initialfolder, "{id}.json"))) {
+    constructor(string memory _initialfolder, address _playerContractAddress) ERC1155(string(abi.encodePacked(_initialfolder, "{id}.json"))) {
         setTokenUri(BLACKSOLDIER, string(abi.encodePacked(_initialfolder, "0", ".json")));
         setTokenUri(VAULTPARTS, string(abi.encodePacked(_initialfolder, "1", ".json")));
-        PlayerContract = _playerContract;
+        playerContractAddress = _playerContractAddress;
     }
 
     modifier onlyPlayer() {
-        require(msg.sender == PlayerContract, "Not player contract"); // == é para assertions
+        require(msg.sender == playerContractAddress, "Not player contract address.");
         _;
     }
 
-    function mintCharacter(address recipient, uint256 id) external onlyPlayer {
-        require(_id != 1, "The Player cannot mint VaultParts on MintCharacter function.");
-        // require that _uris[].length>= id
-        _mint(recipient, id, amount, "");
+    function mintCharacter(address _recipient, uint256 _id) external onlyPlayer {
+        require(_id != VAULTPARTS, "The Player cannot mint VaultParts on MintCharacter function.");
+        // QUESTION require that _uris[].length>= id
+        _mint(_recipient, _id, 1, "");
     }
 
+    // TODO block the transfer of vault parts to any address except the MothoraVault.
     function mintVaultParts(address recipient, uint256 amount) external onlyPlayer {
-        _mint(recipient, 1, amount, "");
+        _mint(recipient, VAULTPARTS, amount, "");
     }
 
     function uri(uint256 tokenId) override public view returns (string memory) {
