@@ -19,6 +19,8 @@ contract PlayerVault is Ownable {
 
     mapping(address => uint256) public stakedTime;
 
+    mapping(address => uint256) public lastClaimTime;
+
     mapping(address => uint256) public playerStakedPartsBalance;
     mapping(uint256 => uint256) public factionPartsBalance;
 
@@ -35,15 +37,21 @@ contract PlayerVault is Ownable {
     uint256 totalVaultPartsContributed;
     uint256 lastTimeUpdate;
     uint256 epochRewards;
+    uint256 epochDuration;
+    uint256 epochStartTime; 
+    uint256 lastEpochTime;
 
     //===============Functions=============
 
-    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress, uint _epochRewards) public {
+    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress, uint _epochRewards, uint _epochDuration) public {
         tokenAddress = _tokenAddress;
         EssenceAddress = IERC20(_tokenAddress);
         GameItemsContract = GameItems(_gameitemsaddress);
         PlayerContract1 = PlayerContract(_playercontractaddress);
         epochRewards = _epochRewards;
+        epochDuration = _epochDuration;
+        epochStartTime = block.timestamp;
+
     }
 
     function pullFunds(uint _amount) external onlyOwner {
@@ -92,24 +100,30 @@ contract PlayerVault is Ownable {
         totalVaultPartsContributed = totalVaultPartsContributed + _amount;
     }
 
-    // claimrewards -> implies definicao funcao de reward bastante superior a 15% APR
+
     function ClaimEpochRewards() external{
-        
-        // factor1 calculation
+        lastEpochTime = epochStartTime + epochDuration*(((block.timestamp - epochStartTime)/epochDuration) % 1); //TODO confirm if this is giving you the number rounded (1,3 = 1)
+        require(lastClaimTime[msg.sender] < lastEpochTime, "The player has already claimed in this epoch.");
+
+        // player factor1 calculation
         totalStakedTime = totalStakedTime + (block.timestamp - lastTimeUpdate);
         totalStakedTimeAmountValue = totalStakedTime * totalStakedBalance;
         uint256 factor1 = stakedESSBalance[msg.sender] * stakedTime[msg.sender] / totalStakedTimeAmountValue;
         
-        // factor2 and facgtor3 calculation
+        // player factor2 and factor3 calculation
         uint256 factor2 = playerStakedPartsBalance[msg.sender] / totalVaultPartsContributed;
         uint256 factor3 = factionPartsBalance[PlayerContract1.getFaction(msg.sender)] / totalVaultPartsContributed;
 
         // World level factor calculation
         uint256 maxedfactor1 = totalStakedTimeAmountValue;
         uint256 maxedfactor2 = totalVaultPartsContributed;
-        uint256 maxedfactor3 = PlayerContract1.totalFactionMembers[1]*factionPartsBalance[1]+PlayerContract1.totalFactionMembers[2]*factionPartsBalance[2]+PlayerContract1.totalFactionMembers[3]*factionPartsBalance[3];
-
+        uint256 maxedfactor3 = PlayerContract1.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract1.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract1.totalFactionMembers(3)*factionPartsBalance[3];
+        
         // Calculation of player rewards (players' share of world)
-    }
+        uint256 playerRewards = (epochRewards*90/100)*(factor1/maxedfactor1)+(epochRewards*7/100)*(factor2/maxedfactor2)+(epochRewards*3/100)*(factor3/maxedfactor3);
+
+        EssenceAddress.transferFrom(address(this), msg.sender, _amount); // TODO move this to safeTransferFrom - error is happening
+        lastClaimTime[msg.sender] = block.timestamp;
+    }   
     
 }
