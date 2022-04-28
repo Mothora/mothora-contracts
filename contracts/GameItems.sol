@@ -16,19 +16,23 @@ contract GameItems is ERC1155, Ownable {
 
     mapping (uint256 => string) private _uris;
 
-    uint256 public constant BLACKSOLDIER = 0;
-    uint256 public constant VAULTPARTS = 1;
+    uint256 public constant VAULTPARTS = 0;
+    uint256 public constant VAHNU = 1;
+    uint256 public constant CONGLOMERATE = 2;
+    uint256 public constant DOC = 3;
 
     address public playerContractAddress;
 
     //===============Functions=============
 
     // To translate CIDv0 (Qm) to CIDv1 (ba) use this website: https://cid.ipfs.io/
-    // constructor() ERC1155("https://bafybeif257x7rsniq477knwmrl7cx57zqu2jmo2tjm7re5mb4hlxrypjki.ipfs.dweb.link/{id}.json") {}
+    // constructor() ERC1155("https://bafybeiex2io5lawckt4bgjjyhmvfy7yk72s4fmhuxj2rgehwzaa6lderkm.ipfs.dweb.link/{id}.json") {}
 
     constructor(string memory _initialfolder, address _playerContractAddress) ERC1155(string(abi.encodePacked(_initialfolder, "{id}.json"))) {
-        setTokenUri(BLACKSOLDIER, string(abi.encodePacked(_initialfolder, "0", ".json")));
-        setTokenUri(VAULTPARTS, string(abi.encodePacked(_initialfolder, "1", ".json")));
+        setTokenUri(VAULTPARTS, string(abi.encodePacked(_initialfolder, "0", ".json")));
+        setTokenUri(VAHNU, string(abi.encodePacked(_initialfolder, "1", ".json")));
+        setTokenUri(CONGLOMERATE, string(abi.encodePacked(_initialfolder, "2", ".json")));
+        setTokenUri(DOC, string(abi.encodePacked(_initialfolder, "3", ".json")));
         playerContractAddress = _playerContractAddress;
     }
 
@@ -39,7 +43,6 @@ contract GameItems is ERC1155, Ownable {
 
     function mintCharacter(address _recipient, uint256 _id) external onlyPlayer {
         require(_id != VAULTPARTS, "The Player cannot mint VaultParts on MintCharacter function.");
-        // QUESTION require that _uris[].length>= id
         _mint(_recipient, _id, 1, "");
     }
 

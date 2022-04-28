@@ -11,7 +11,7 @@ contract PlayerContract is Ownable {
     //===============Variables=============
 
     enum Faction {NONE, VAHNU, CONGLOMERATE, DOC}
-    uint256[] public totalFactionMembers;
+    uint256[4] public totalFactionMembers;
 
     struct Player {
         Faction faction;
@@ -31,7 +31,7 @@ contract PlayerContract is Ownable {
     }
 
     function JoinFaction(uint _faction) external {
-        require(players[msg.sender].faction == Faction.NONE, "This player already has a faction.");
+        require(uint256(players[msg.sender].faction) == 0, "This player already has a faction.");
         require(_faction == 1 || _faction == 2 || _faction == 3, "Please select a valid faction.");
         if (_faction == 1) {
             players[msg.sender].faction = Faction.VAHNU;
@@ -62,10 +62,10 @@ contract PlayerContract is Ownable {
         // TODO burn all vault part NFTs this wallet has on it. 
     }
 
-    function MintCharacter(uint256 _id) external {
+    function MintCharacter() external {
         require(players[msg.sender].faction != Faction.NONE, "This Player has no faction yet.");
-        require(GameItemsContract.balanceOf(msg.sender, _id) == 0, "The Player can only mint 1 Character of each type.");
-        GameItemsContract.mintCharacter(msg.sender,_id);
+        require(GameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 0, "The Player can only mint 1 Character of each type.");
+        GameItemsContract.mintCharacter(msg.sender, getFaction(msg.sender));
     }
 
     function GoOnQuest(uint256 _id) external {
@@ -107,7 +107,6 @@ contract PlayerContract is Ownable {
     } 
 
     function getFaction(address _recipient) public view returns (uint256) {
-        require(players[_recipient].faction != Faction.NONE, "This Player has no faction yet.");
         return uint256(players[_recipient].faction);
     }
 

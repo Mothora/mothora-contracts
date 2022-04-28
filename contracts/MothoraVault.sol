@@ -3,11 +3,14 @@ pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {PlayerContract} from "./Player.sol";
 import {GameItems} from "./GameItems.sol";
 import {Essence} from "./Essence.sol";
 
 contract PlayerVault is Ownable {
+
+    using SafeERC20 for IERC20;
 
     //===============Storage===============
 
@@ -40,10 +43,16 @@ contract PlayerVault is Ownable {
     uint256 epochDuration;
     uint256 epochStartTime; 
     uint256 lastEpochTime;
+    uint256 factor1;
+    uint256 factor2;
+    uint256 factor3;
+    uint256 maxedfactor1;
+    uint256 maxedfactor2;
+    uint256 maxedfactor3;
 
     //===============Functions=============
 
-    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress, uint _epochRewards, uint _epochDuration) public {
+    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress, uint _epochRewards, uint _epochDuration) {
         tokenAddress = _tokenAddress;
         EssenceAddress = IERC20(_tokenAddress);
         GameItemsContract = GameItems(_gameitemsaddress);
@@ -55,13 +64,13 @@ contract PlayerVault is Ownable {
     }
 
     function pullFunds(uint _amount) external onlyOwner {
-        EssenceAddress.transferFrom(tokenAddress, address(this), _amount);
+        EssenceAddress.safeTransferFrom(tokenAddress, address(this), _amount);
     }
 
     function stakeTokens(uint256 _amount) public {
         require(_amount > 0, "Amount must be more than 0");
         uint initialStakedAmount = stakedESSBalance[msg.sender];
-        EssenceAddress.transferFrom(msg.sender, address(this), _amount); // TODO move this to safeTransferFrom - error is happening
+        EssenceAddress.safeTransferFrom(msg.sender, address(this), _amount);
 
         // Calculate Final State - QUESTION: these lines below should not run if transaction on line 37 reverts
         stakedESSBalance[msg.sender] = stakedESSBalance[msg.sender] + _amount;
@@ -79,7 +88,7 @@ contract PlayerVault is Ownable {
     function unstakeTokens(uint256 _amount) public {
         require(stakedESSBalance[msg.sender] > 0, "Staking balance cannot be 0");
         require(_amount <= stakedESSBalance[msg.sender], "Cannot unstake more than your staked balance");
-        EssenceAddress.transferFrom(address(this), msg.sender, _amount); // TODO move this to safeTransferFrom - error is happening
+        EssenceAddress.safeTransferFrom(address(this), msg.sender, _amount);
 
         // Calculate Final State - QUESTION: these lines below should not run if transaction on line 54 reverts
         stakedESSBalance[msg.sender] = stakedESSBalance[msg.sender] - _amount;
@@ -108,21 +117,21 @@ contract PlayerVault is Ownable {
         // player factor1 calculation
         totalStakedTime = totalStakedTime + (block.timestamp - lastTimeUpdate);
         totalStakedTimeAmountValue = totalStakedTime * totalStakedBalance;
-        uint256 factor1 = stakedESSBalance[msg.sender] * stakedTime[msg.sender] / totalStakedTimeAmountValue;
+        factor1 = stakedESSBalance[msg.sender] * stakedTime[msg.sender] / totalStakedTimeAmountValue;
         
         // player factor2 and factor3 calculation
-        uint256 factor2 = playerStakedPartsBalance[msg.sender] / totalVaultPartsContributed;
-        uint256 factor3 = factionPartsBalance[PlayerContract1.getFaction(msg.sender)] / totalVaultPartsContributed;
+        factor2 = playerStakedPartsBalance[msg.sender] / totalVaultPartsContributed;
+        factor3 = factionPartsBalance[PlayerContract1.getFaction(msg.sender)] / totalVaultPartsContributed;
 
         // World level factor calculation
-        uint256 maxedfactor1 = totalStakedTimeAmountValue;
-        uint256 maxedfactor2 = totalVaultPartsContributed;
-        uint256 maxedfactor3 = PlayerContract1.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract1.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract1.totalFactionMembers(3)*factionPartsBalance[3];
+        maxedfactor1 = totalStakedTimeAmountValue;
+        maxedfactor2 = totalVaultPartsContributed;
+        maxedfactor3 = PlayerContract1.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract1.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract1.totalFactionMembers(3)*factionPartsBalance[3];
         
         // Calculation of player rewards (players' share of world)
         uint256 playerRewards = (epochRewards*90/100)*(factor1/maxedfactor1)+(epochRewards*7/100)*(factor2/maxedfactor2)+(epochRewards*3/100)*(factor3/maxedfactor3);
 
-        EssenceAddress.transferFrom(address(this), msg.sender, _amount); // TODO move this to safeTransferFrom - error is happening
+        EssenceAddress.safeTransferFrom(address(this), msg.sender, playerRewards);
         lastClaimTime[msg.sender] = block.timestamp;
     }   
     
