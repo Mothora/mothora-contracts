@@ -36,18 +36,18 @@ contract GameItems is ERC1155, Ownable {
         playerContractAddress = _playerContractAddress;
     }
 
-    modifier onlyPlayer() {
+    modifier onlyPlayerContract() {
         require(msg.sender == playerContractAddress, "Not player contract address.");
         _;
     }
 
-    function mintCharacter(address _recipient, uint256 _id) external onlyPlayer {
+    function mintCharacter(address _recipient, uint256 _id) external onlyPlayerContract {
         require(_id != VAULTPARTS, "The Player cannot mint VaultParts on MintCharacter function.");
         _mint(_recipient, _id, 1, "");
     }
 
     // TODO block the transfer of vault parts to any address except the MothoraVault.
-    function mintVaultParts(address recipient, uint256 amount) external onlyPlayer {
+    function mintVaultParts(address recipient, uint256 amount) external onlyPlayerContract {
         _mint(recipient, VAULTPARTS, amount, "");
     }
 

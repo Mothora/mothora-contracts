@@ -4,7 +4,7 @@ pragma solidity ^0.8.12;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {PlayerContract} from "./Player.sol";
+import {Player} from "./Player.sol";
 import {GameItems} from "./GameItems.sol";
 import {Essence} from "./Essence.sol";
 
@@ -31,7 +31,7 @@ contract PlayerVault is Ownable {
     IERC20 public EssenceAddress;
     address tokenAddress;
     GameItems GameItemsContract;
-    PlayerContract PlayerContract1;
+    Player PlayerContract;
     
     // Rewards Function variables
     uint256 totalStakedTime;
@@ -56,7 +56,7 @@ contract PlayerVault is Ownable {
         tokenAddress = _tokenAddress;
         EssenceAddress = IERC20(_tokenAddress);
         GameItemsContract = GameItems(_gameitemsaddress);
-        PlayerContract1 = PlayerContract(_playercontractaddress);
+        PlayerContract = Player(_playercontractaddress);
         epochRewards = _epochRewards;
         epochDuration = _epochDuration;
         epochStartTime = block.timestamp;
@@ -104,7 +104,7 @@ contract PlayerVault is Ownable {
 
         // Calculate Final State - QUESTION: these lines below should not run if transaction on line 72 reverts
         playerStakedPartsBalance[msg.sender] = playerStakedPartsBalance[msg.sender] + _amount;
-        uint256 faction = PlayerContract1.getFaction(msg.sender);
+        uint256 faction = PlayerContract.getFaction(msg.sender);
         factionPartsBalance[faction] = factionPartsBalance[faction] + _amount;
         totalVaultPartsContributed = totalVaultPartsContributed + _amount;
     }
@@ -121,12 +121,12 @@ contract PlayerVault is Ownable {
         
         // player factor2 and factor3 calculation
         factor2 = playerStakedPartsBalance[msg.sender] / totalVaultPartsContributed;
-        factor3 = factionPartsBalance[PlayerContract1.getFaction(msg.sender)] / totalVaultPartsContributed;
+        factor3 = factionPartsBalance[PlayerContract.getFaction(msg.sender)] / totalVaultPartsContributed;
 
         // World level factor calculation
         maxedfactor1 = totalStakedTimeAmountValue;
         maxedfactor2 = totalVaultPartsContributed;
-        maxedfactor3 = PlayerContract1.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract1.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract1.totalFactionMembers(3)*factionPartsBalance[3];
+        maxedfactor3 = PlayerContract.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract.totalFactionMembers(3)*factionPartsBalance[3];
         
         // Calculation of player rewards (players' share of world)
         uint256 playerRewards = (epochRewards*90/100)*(factor1/maxedfactor1)+(epochRewards*7/100)*(factor2/maxedfactor2)+(epochRewards*3/100)*(factor3/maxedfactor3);

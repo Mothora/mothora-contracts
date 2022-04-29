@@ -2,10 +2,10 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { GameItems } from "../typechain-types";
-import { PlayerContract } from "../typechain-types";
+import { Player } from "../typechain-types";
 
 describe('MockInteractions', async () => {
-    let player: PlayerContract;
+    let player: Player;
     let gameitems: GameItems;
     let accounts: SignerWithAddress[];
 
@@ -13,7 +13,7 @@ describe('MockInteractions', async () => {
     accounts = await ethers.getSigners();
 
     // Deploy Player Contract
-    const PlayerContractFactory = await ethers.getContractFactory("PlayerContract");
+    const PlayerContractFactory = await ethers.getContractFactory("Player");
     player = await PlayerContractFactory.deploy();
     await player.deployed();
     console.log({ "Player contract deployed to": player.address });
@@ -29,7 +29,7 @@ describe('MockInteractions', async () => {
     await player.MintCharacter(0);*/
   });
 
-  describe('Player joins a faction, defects, mints Character, goes on a Quest.', async () => {
+  describe('Player joins a faction, defects, mints Character, goes on a quest and claims its rewards', async () => {
     
     it('It reverts if the player selects and invalid faction', async () => {
       await expect(player.connect(accounts[0]).JoinFaction(4)).to.be.revertedWith("Please select a valid faction.");
@@ -69,8 +69,39 @@ describe('MockInteractions', async () => {
       await expect(gameitems.connect(accounts[0]).mintCharacter(accounts[0].address,2)).to.be.reverted;  
     });
 
-    
+    it('It reverts if player does not have a character of its faction.', async () => {
+      await expect(player.connect(accounts[1]).GoOnQuest()).to.be.revertedWith("The Player does not own a character of this faction.");  
+    });
 
+    it('Player goes on a Quest', async () => {
+      await player.connect(accounts[0]).GoOnQuest();
+    });
+
+    it('It reverts if player is already on a quest', async () => {
+      await expect(player.connect(accounts[0]).GoOnQuest()).to.be.revertedWith("The Player is already on a quest.");
+    });
+
+    it('It if lock time has passed but Player has not claimed its rewards', async () => {
+      await ethers.provider.send("evm_increaseTime", [601]) // add 601 seconds
+      await expect(player.connect(accounts[0]).GoOnQuest()).to.be.revertedWith("The Player has not claimed its rewards.");
+    });
+
+    it('It reverts if Player tries to claim rewards without doing the quest', async () => {
+      await expect(player.connect(accounts[1]).ClaimQuestRewards()).to.be.revertedWith("The Player has to go on a quest first to claim its rewards.");
+    });
+
+    it('It reverts if Player tries to claim rewards while doing the quest', async () => {
+      await player.connect(accounts[1]).JoinFaction(3);
+      await player.connect(accounts[1]).MintCharacter();
+      await player.connect(accounts[1]).GoOnQuest();
+      await expect(player.connect(accounts[1]).ClaimQuestRewards()).to.be.revertedWith("The Player is still on a quest.");
+    });
+
+    it('The Player Claims the rewards', async () => {
+      await player.connect(accounts[0]).ClaimQuestRewards();
+      expect(await player.connect(accounts[0]).getMultiplier(accounts[0].address)).to.be.least(0);
+      expect(await gameitems.balanceOf(accounts[0].address,0)).to.be.least(0);
+    });
 
   });
 });

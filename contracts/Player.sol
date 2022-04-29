@@ -3,7 +3,7 @@ pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import {GameItems} from "./GameItems.sol";
-contract PlayerContract is Ownable {    
+contract Player is Ownable {    
     //===============Storage===============
 
     //===============Events================
@@ -13,14 +13,16 @@ contract PlayerContract is Ownable {
     enum Faction {NONE, VAHNU, CONGLOMERATE, DOC}
     uint256[4] public totalFactionMembers;
 
-    struct Player {
+    uint256 public random;
+
+    struct PlayerData {
         Faction faction;
         uint256 timelock;
         bool characterFullofRewards;
         uint256 multiplier;
     }
     
-    mapping (address => Player) players;
+    mapping (address => PlayerData) players;
 
     GameItems GameItemsContract;
     
@@ -68,49 +70,45 @@ contract PlayerContract is Ownable {
         GameItemsContract.mintCharacter(msg.sender, getFaction(msg.sender));
     }
 
-    function GoOnQuest(uint256 _id) external {
-        require(GameItemsContract.balanceOf(msg.sender, _id) == 1, "The Player does not own a character of this type.");
+    function GoOnQuest() external {
+        require(GameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 1, "The Player does not own a character of this faction.");
         require(players[msg.sender].timelock < block.timestamp, "The Player is already on a quest.");
-        players[msg.sender].timelock = block.timestamp + 2 minutes;
+        require(players[msg.sender].characterFullofRewards == false, "The Player has not claimed its rewards.");
+        players[msg.sender].timelock = block.timestamp + 10 minutes;
         players[msg.sender].characterFullofRewards = true;
     }
 
     function ClaimQuestRewards() external {
+        require(players[msg.sender].characterFullofRewards == true, "The Player has to go on a quest first to claim its rewards.");
         require(players[msg.sender].timelock < block.timestamp, "The Player is still on a quest.");
-        require(players[msg.sender].characterFullofRewards = true, "The Player has to go on a quest first to claim its rewards.");
-
-        uint random = pseudorandom();
+        
+        random = uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty))) % 1000;
         if (random >=800) {
             GameItemsContract.mintVaultParts(msg.sender,5);
-            players[msg.sender].multiplier = players[msg.sender].multiplier + 5;
+            players[msg.sender].multiplier = players[msg.sender].multiplier + 1;
         } else if (random <800 && random >=600) {
             GameItemsContract.mintVaultParts(msg.sender,4);
-            players[msg.sender].multiplier = players[msg.sender].multiplier + 4;
+            players[msg.sender].multiplier = players[msg.sender].multiplier + 2;
         } else if (random <600 && random >=400) {
             GameItemsContract.mintVaultParts(msg.sender,3);
             players[msg.sender].multiplier = players[msg.sender].multiplier + 3;
         } else if (random <400 && random >=200) {
             GameItemsContract.mintVaultParts(msg.sender,2);
-            players[msg.sender].multiplier = players[msg.sender].multiplier + 2;
+            players[msg.sender].multiplier = players[msg.sender].multiplier + 4;
         } else if (random <200) {
             GameItemsContract.mintVaultParts(msg.sender,1);
-            players[msg.sender].multiplier = players[msg.sender].multiplier + 1;
+            players[msg.sender].multiplier = players[msg.sender].multiplier + 5;
         }
 
         players[msg.sender].characterFullofRewards = false;
     
     }
 
-    function pseudorandom() private view returns (uint) {
-        uint randomHash = uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty)));
-        return randomHash % 1000;
-    } 
-
     function getFaction(address _recipient) public view returns (uint256) {
         return uint256(players[_recipient].faction);
     }
 
-    function getMultiplier(address _recipient) external view returns (uint) {
+    function getMultiplier(address _recipient) external view returns (uint256) {
         require(players[_recipient].faction != Faction.NONE, "This Player has no faction yet.");
         return players[_recipient].multiplier;
     }
