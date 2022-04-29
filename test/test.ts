@@ -3,10 +3,14 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { GameItems } from "../typechain-types";
 import { Player } from "../typechain-types";
+import { MothoraVault } from "../typechain-types";
+import { Essence } from "../typechain-types";
 
 describe('MockInteractions', async () => {
     let player: Player;
     let gameitems: GameItems;
+    let vault: MothoraVault;
+    let token: Essence;
     let accounts: SignerWithAddress[];
 
   before(async () => {
@@ -25,8 +29,18 @@ describe('MockInteractions', async () => {
     console.log({ "GameItems contract deployed to": gameitems.address });
     await player.setGameItems(gameitems.address);
 
-    /* Create a way to access the GameItems contract functions on PlayerContract without inheriting it (Creates an instance of a contract on anothercontract)
-    await player.MintCharacter(0);*/
+    // Deploy Essence Contract
+    const EssenceFactory = await ethers.getContractFactory("Essence");
+    token = await EssenceFactory.deploy();
+    await token.deployed();
+    console.log({ "Essence contract deployed to": token.address });    
+
+    // Deploy MothoraVault Contract
+    const MothoraVaultFactory = await ethers.getContractFactory("MothoraVault");
+    vault = await MothoraVaultFactory.deploy(token.address, gameitems.address, player.address,15, 600);
+    await vault.deployed();
+    console.log({ "MothoraVault contract deployed to": vault.address });    
+
   });
 
   describe('Player joins a faction, defects, mints Character, goes on a quest and claims its rewards', async () => {
@@ -104,4 +118,31 @@ describe('MockInteractions', async () => {
     });
 
   });
+
+  describe('Player tries interact directly with GameItems.sol but is successfully blocked.', async () => {
+    
+    it('It reverts on minting a character or vaultpart', async () => {
+      await expect(gameitems.connect(accounts[0]).mintCharacter(accounts[0].address, 0)).to.be.revertedWith("Not player contract address.");
+      await expect(gameitems.connect(accounts[0]).mintVaultParts(accounts[0].address, 0)).to.be.revertedWith("Not player contract address.");
+    }); 
+
+    it('It reverts on setting a token  if not the owner', async () => {
+      await expect(gameitems.connect(accounts[1]).setTokenUri(0, "")).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it('It reverts on re-setting a token uri by the owner', async () => {
+      await expect(gameitems.connect(accounts[0]).setTokenUri(0, "")).to.be.revertedWith("Cannot set uri twice.");
+    });
+    
+  });
+
+  describe('Pulling Funds', async () => {
+     
+    it('It reverts pulling funds if not the owner', async () => {
+      await expect(gameitems.connect(accounts[0]).setTokenUri(0, "")).to.be.revertedWith("Cannot set uri twice.");
+    });
+
+  });
+
+
 });

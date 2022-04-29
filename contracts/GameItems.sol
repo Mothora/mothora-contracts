@@ -46,7 +46,6 @@ contract GameItems is ERC1155, Ownable {
         _mint(_recipient, _id, 1, "");
     }
 
-    // TODO block the transfer of vault parts to any address except the MothoraVault.
     function mintVaultParts(address recipient, uint256 amount) external onlyPlayerContract {
         _mint(recipient, VAULTPARTS, amount, "");
     }
@@ -56,7 +55,7 @@ contract GameItems is ERC1155, Ownable {
     }
     
     function setTokenUri(uint256 tokenId, string memory NFTuri) public onlyOwner {
-        require(bytes(_uris[tokenId]).length == 0, "Cannot set uri twice"); 
+        require(bytes(_uris[tokenId]).length == 0, "Cannot set uri twice."); 
         _uris[tokenId] = NFTuri; 
     }
 

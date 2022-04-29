@@ -8,7 +8,7 @@ import {Player} from "./Player.sol";
 import {GameItems} from "./GameItems.sol";
 import {Essence} from "./Essence.sol";
 
-contract PlayerVault is Ownable {
+contract MothoraVault is Ownable {
 
     using SafeERC20 for IERC20;
 
@@ -52,12 +52,12 @@ contract PlayerVault is Ownable {
 
     //===============Functions=============
 
-    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress, uint _epochRewards, uint _epochDuration) {
+    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress,uint256 _epochRewardsAPR, uint256 _epochDuration) {
         tokenAddress = _tokenAddress;
         EssenceAddress = IERC20(_tokenAddress);
         GameItemsContract = GameItems(_gameitemsaddress);
         PlayerContract = Player(_playercontractaddress);
-        epochRewards = _epochRewards;
+        epochRewards = (1000000*10**18)*_epochRewardsAPR/100;
         epochDuration = _epochDuration;
         epochStartTime = block.timestamp;
 

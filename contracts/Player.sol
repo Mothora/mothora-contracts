@@ -74,7 +74,7 @@ contract Player is Ownable {
         require(GameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 1, "The Player does not own a character of this faction.");
         require(players[msg.sender].timelock < block.timestamp, "The Player is already on a quest.");
         require(players[msg.sender].characterFullofRewards == false, "The Player has not claimed its rewards.");
-        players[msg.sender].timelock = block.timestamp + 10 minutes;
+        players[msg.sender].timelock = block.timestamp + 120;
         players[msg.sender].characterFullofRewards = true;
     }
 
