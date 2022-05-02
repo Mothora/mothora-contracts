@@ -10,17 +10,21 @@ import {Essence} from "./Essence.sol";
 
 contract MothoraVault is Ownable {
 
+    //=========== DEPENDENCIES ============
+    
     using SafeERC20 for IERC20;
 
-    //===============Storage===============
+    //============== STORAGE ==============
 
-    //===============Events================
+    //============== EVENTS ===============
 
-    //===============Variables=============
+    //============== VARIABLES ============
 
     mapping(address => uint256) public stakedESSBalance;
 
-    mapping(address => uint256) public stakedTime;
+    mapping(address => uint256) public stakedDuration;
+    mapping(address => uint256) public lastUpdate;
+    mapping(address => uint256) public timeTier;
 
     mapping(address => uint256) public lastClaimTime;
 
@@ -36,7 +40,6 @@ contract MothoraVault is Ownable {
     // Rewards Function variables
     uint256 totalStakedTime;
     uint256 totalStakedBalance;
-    uint256 totalStakedTimeAmountValue;
     uint256 totalVaultPartsContributed;
     uint256 lastTimeUpdate;
     uint256 epochRewards;
@@ -52,32 +55,29 @@ contract MothoraVault is Ownable {
 
     //===============Functions=============
 
-    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress,uint256 _epochRewardsAPR, uint256 _epochDuration) {
-        tokenAddress = _tokenAddress;
+    constructor(address _tokenAddress, address _gameitemsaddress, address _playercontractaddress,uint256 _epochRewardsPercentage, uint256 _epochDuration) {
         EssenceAddress = IERC20(_tokenAddress);
         GameItemsContract = GameItems(_gameitemsaddress);
         PlayerContract = Player(_playercontractaddress);
-        epochRewards = (1000000*10**18)*_epochRewardsAPR/100;
+        epochRewards = (1000000*10**18)*_epochRewardsPercentage/100;
         epochDuration = _epochDuration;
         epochStartTime = block.timestamp;
 
-    }
 
-    function pullFunds(uint _amount) external onlyOwner {
-        EssenceAddress.safeTransferFrom(tokenAddress, address(this), _amount);
     }
 
     function stakeTokens(uint256 _amount) public {
-        require(_amount > 0, "Amount must be more than 0");
+        require(_amount > 0, "Amount must be more than 0.");
         uint initialStakedAmount = stakedESSBalance[msg.sender];
         EssenceAddress.safeTransferFrom(msg.sender, address(this), _amount);
 
         // Calculate Final State - QUESTION: these lines below should not run if transaction on line 37 reverts
         stakedESSBalance[msg.sender] = stakedESSBalance[msg.sender] + _amount;
         if (initialStakedAmount == 0) {
-            stakedTime[msg.sender] = block.timestamp;
+            lastUpdate[msg.sender] = block.timestamp;
         } else {
-            stakedTime[msg.sender] = stakedTime[msg.sender] * (initialStakedAmount/stakedESSBalance[msg.sender]); //weighted average of balance & time staked
+            stakedDuration[msg.sender] = (block.timestamp - lastUpdate[msg.sender]) * (initialStakedAmount/stakedESSBalance[msg.sender]); //weighted average of balance & time staked
+            lastUpdate[msg.sender] = block.timestamp;
         }
 
         totalStakedTime = totalStakedTime * (totalStakedBalance/(totalStakedBalance+_amount));
@@ -109,25 +109,38 @@ contract MothoraVault is Ownable {
         totalVaultPartsContributed = totalVaultPartsContributed + _amount;
     }
 
+    function CalculateTimeTier(address _playeraddress) private returns (uint256) {
+        stakedDuration[msg.sender] = stakedDuration[msg.sender] + (block.timestamp - lastUpdate[msg.sender]);
+        lastUpdate[msg.sender] = block.timestamp;
+        if (stakedDuration[msg.sender] <= 86400) {
+            timeTier[msg.sender] = 1;
+        } else if (stakedDuration[msg.sender] >86400 && stakedDuration[msg.sender] <=172800) {
+            timeTier[msg.sender] = uint256(13)/uint256(10);
+        } else if (stakedDuration[msg.sender] >172800 && stakedDuration[msg.sender] <=432000) {
+            timeTier[msg.sender] = uint256(16)/uint256(10);
+        } else if (stakedDuration[msg.sender] >432000) {
+            timeTier[msg.sender] = 2;
+        }
+        return timeTier[msg.sender];
+    }
 
     function ClaimEpochRewards() external{
         lastEpochTime = epochStartTime + epochDuration*(((block.timestamp - epochStartTime)/epochDuration) % 1); //TODO confirm if this is giving you the number rounded (1,3 = 1)
         require(lastClaimTime[msg.sender] < lastEpochTime, "The player has already claimed in this epoch.");
 
-        // player factor1 calculation
+        // World level factor calculation
         totalStakedTime = totalStakedTime + (block.timestamp - lastTimeUpdate);
-        totalStakedTimeAmountValue = totalStakedTime * totalStakedBalance;
-        factor1 = stakedESSBalance[msg.sender] * stakedTime[msg.sender] / totalStakedTimeAmountValue;
+        maxedfactor1 = totalStakedTime * totalStakedBalance;
+        maxedfactor2 = totalVaultPartsContributed;
+        maxedfactor3 = PlayerContract.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract.totalFactionMembers(3)*factionPartsBalance[3];
+
+        // player factor1 calculation
+        factor1 = stakedESSBalance[msg.sender] * stakedDuration[msg.sender] / maxedfactor1;
         
         // player factor2 and factor3 calculation
         factor2 = playerStakedPartsBalance[msg.sender] / totalVaultPartsContributed;
-        factor3 = factionPartsBalance[PlayerContract.getFaction(msg.sender)] / totalVaultPartsContributed;
+        factor3 = factionPartsBalance[PlayerContract.getFaction(msg.sender)] / totalVaultPartsContributed;    
 
-        // World level factor calculation
-        maxedfactor1 = totalStakedTimeAmountValue;
-        maxedfactor2 = totalVaultPartsContributed;
-        maxedfactor3 = PlayerContract.totalFactionMembers(1)*factionPartsBalance[1]+PlayerContract.totalFactionMembers(2)*factionPartsBalance[2]+PlayerContract.totalFactionMembers(3)*factionPartsBalance[3];
-        
         // Calculation of player rewards (players' share of world)
         uint256 playerRewards = (epochRewards*90/100)*(factor1/maxedfactor1)+(epochRewards*7/100)*(factor2/maxedfactor2)+(epochRewards*3/100)*(factor3/maxedfactor3);
 
