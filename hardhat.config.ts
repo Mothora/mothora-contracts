@@ -47,13 +47,13 @@ const config: HardhatUserConfig = {
       chainId: 31337,
       throwOnTransactionFailures: true,
       throwOnCallFailures: true,
-      url: 'http://localhost:8545'
+      url: 'http://localhost:8545',
     },
   },
   solidity: {
     compilers: [
       {
-        version: '0.8.12',
+        version: '0.8.13',
         settings: {
           optimizer: {
             enabled: true,
