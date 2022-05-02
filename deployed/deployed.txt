@@ -1,0 +1,1 @@
+'Player contract deployed to': '0x45e552Cf75ff1Bc9912C0eC2b989c0b744fF293D'

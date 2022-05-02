@@ -7,6 +7,8 @@
     "test": "hardhat compile && hardhat test",
     "local": "hardhat run --network hardhatevm scripts/deploy.ts",
     "rinkeby": "hardhat run --network rinkeby scripts/deploy.ts",
+    "ropsten": "hardhat run --network ropsten scripts/deploy.ts",
+    "goerli": "hardhat run --network goerli scripts/deploy.ts",
     "node": "hardhat node",
     "compile": "hardhat compile"
   },
