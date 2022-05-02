@@ -1,10 +1,12 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { GameItems } from '../typechain-types';
-import { Player } from '../typechain-types';
-import { MothoraVault } from '../typechain-types';
-import { Essence } from '../typechain-types';
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { GameItems } from "../typechain-types";
+import { Player } from "../typechain-types";
+import { MothoraVault } from "../typechain-types";
+import { Essence } from "../typechain-types";
+import { BigNumber } from 'bignumber.js';
+
 
 describe('MockInteractions', async () => {
   let player: Player;
@@ -40,6 +42,7 @@ describe('MockInteractions', async () => {
 
     // Deploy MothoraVault Contract
     const MothoraVaultFactory = await ethers.getContractFactory('MothoraVault');
+
     vault = await MothoraVaultFactory.deploy(token.address, gameitems.address, player.address, 15, 600);
     await vault.deployed();
     console.log({ 'MothoraVault contract deployed to': vault.address });
@@ -150,9 +153,19 @@ describe('MockInteractions', async () => {
     });
   });
 
+
   describe('Pulling Funds', async () => {
     it('It reverts pulling funds if not the owner', async () => {
       await expect(gameitems.connect(accounts[0]).setTokenUri(0, '')).to.be.revertedWith('Cannot set uri twice.');
     });
   });
+  describe('Pulling Funds from Owner to Mothora Vault', async () => {
+
+    it('Owner wallet sends tokens to Mothora Vault', async () => {
+      await token.connect(accounts[0]).approve(accounts[0].address, ethers.constants.MaxUint256);
+      await token.transferFrom(accounts[0].address, vault.address, 1000);
+      expect(await token.balanceOf(vault.address)).to.be.equal(1000);
+    });
+  });
 });
+
