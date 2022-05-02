@@ -18,21 +18,27 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
-      gasPrice: 65 // Para testnets apenas <!>
+      gasPrice: 65, // Para testnets apenas <!>
     },
     ropsten: {
       url: 'https://eth-ropsten.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
-      }, 
-      gasPrice: 65 // Para testnets apenas <!>
+      },
+      gasPrice: 65, // Para testnets apenas <!>
     },
     goerli: {
       url: 'https://eth-goerli.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
-      gasPrice: 65 // Para testnets apenas <!>
+      gasPrice: 65, // Para testnets apenas <!>
+    },
+    arbitrumRinkeby: {
+      url: 'https://arb-rinkeby.g.alchemy.com/v2/' + process.env.ALCHEMY_TOKEN,
+      accounts: {
+        mnemonic: process.env.MNEMONIC as string,
+      },
     },
     mumbai: {
       url: 'https://eth-mumbai.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
