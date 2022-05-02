@@ -18,12 +18,21 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
+      gasPrice: 65 // Para testnets apenas <!>
+    },
+    ropsten: {
+      url: 'https://eth-ropsten.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
+      accounts: {
+        mnemonic: process.env.MNEMONIC as string,
+      }, 
+      gasPrice: 65 // Para testnets apenas <!>
     },
     goerli: {
       url: 'https://eth-goerli.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
+      gasPrice: 65 // Para testnets apenas <!>
     },
     mumbai: {
       url: 'https://eth-mumbai.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
@@ -47,13 +56,13 @@ const config: HardhatUserConfig = {
       chainId: 31337,
       throwOnTransactionFailures: true,
       throwOnCallFailures: true,
-      url: 'http://localhost:8545'
+      url: 'http://localhost:8545',
     },
   },
   solidity: {
     compilers: [
       {
-        version: '0.8.12',
+        version: '0.8.13',
         settings: {
           optimizer: {
             enabled: true,

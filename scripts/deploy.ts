@@ -1,24 +1,50 @@
-import { expect } from "chai";
-import { ethers } from "hardhat";
-import { CharacterNFT2 } from "../typechain-types";
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
+import { GameItems } from '../typechain-types';
+import { Player } from '../typechain-types';
+import { MothoraVault } from '../typechain-types';
+import { Essence } from '../typechain-types';
+import { BigNumber } from 'bignumber.js';
 
 async function main() {
-    let character: CharacterNFT2;
+  let player: Player;
+  let gameitems: GameItems;
+  let vault: MothoraVault;
+  let token: Essence;
 
-    const signers = await ethers.getSigners();
-    console.log({ Signer0: signers[0].address });
-    
-    const CharacterFactory = await ethers.getContractFactory("CharacterNFT2");
-    character = await CharacterFactory.deploy();
-    await character.deployed();
-    
-    
-    
-    console.log({ Character: character.address });
+  console.log({ 'Account': (await ethers.getSigners())[0].address });
+  
+  // Deploy Player Contract
+  const PlayerContractFactory = await ethers.getContractFactory('Player');
+  player = await PlayerContractFactory.deploy();
+  await player.deployed();
+  console.log({ 'Player contract deployed to': player.address });
+
+  // Deploy GameItems Contract
+  const GameItemsFactory = await ethers.getContractFactory('GameItems');
+  gameitems = await GameItemsFactory.deploy(
+    'https://bafybeiex2io5lawckt4bgjjyhmvfy7yk72s4fmhuxj2rgehwzaa6lderkm.ipfs.dweb.link/',
+    player.address
+  );
+  await gameitems.deployed();
+  console.log({ 'GameItems contract deployed to': gameitems.address });
+  await player.setGameItems(gameitems.address);
+
+  // Deploy Essence Contract
+  const EssenceFactory = await ethers.getContractFactory('Essence');
+  token = await EssenceFactory.deploy();
+  await token.deployed();
+  console.log({ 'Essence contract deployed to': token.address });
+
+  // Deploy MothoraVault Contract
+  const MothoraVaultFactory = await ethers.getContractFactory('MothoraVault');
+
+  vault = await MothoraVaultFactory.deploy(token.address, gameitems.address, player.address, 15, 600);
+  await vault.deployed();
+  console.log({ 'MothoraVault contract deployed to': vault.address });
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main()
   .then(() => process.exit(0))
   .catch((error) => {
