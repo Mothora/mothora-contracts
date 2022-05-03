@@ -100,7 +100,7 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         totalStakedBalance = totalStakedBalance - _amount;
     }
 
-    function contributeVaultParts(uint256 _amount) external {
+    function contributeVaultParts(uint256 _amount) external nonReentrant {
         require(_amount > 0, "Amount must be more than 0");
         require(
             gameItemsContract.balanceOf(msg.sender, gameItemsContract.VAULTPARTS()) >= _amount,

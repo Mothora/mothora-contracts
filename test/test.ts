@@ -164,7 +164,7 @@ describe('MockInteractions', async () => {
     });
   });
 
-  describe('Player stakes and unstakes tokens.', async () => {
+  describe('Player stake/unstakes tokens', async () => {
     it('It reverts if amount staked is <0', async () => {
       await expect(vault.connect(accounts[2]).stakeTokens(0)).to.be.revertedWith('Amount must be more than 0.');
       await expect(vault.connect(accounts[2]).stakeTokens(-1)).to.be.reverted;
@@ -203,9 +203,28 @@ describe('MockInteractions', async () => {
     });
 
     it('Player successfully unstakes', async () => {
-      console.log({ a: await vault.a() });
       await vault.connect(accounts[2]).unstakeTokens(1000);
       expect(await vault.stakedESSBalance(accounts[2].address)).to.be.equal(0);
+    });
+  });
+
+  describe('Contribute Vault Parts', async () => {
+    it('It reverts if amount <0', async () => {
+      await expect(vault.connect(accounts[0]).contributeVaultParts(0)).to.be.revertedWith('Amount must be more than 0');
+      await expect(vault.connect(accounts[0]).contributeVaultParts(-1)).to.be.reverted;
+    });
+
+    it('It reverts if the amount is higher than players VP Balance', async () => {
+      expect(await gameitems.connect(accounts[0]).balanceOf(accounts[0].address, 0)).to.be.least(0);
+      await expect(vault.connect(accounts[0]).contributeVaultParts(6)).to.be.revertedWith('The Player does not have enough Vault Parts');
+    });
+
+    it('It successfully contributes vault parts', async () => {
+      console.log({ 'acc 0 vaultparts balance': await gameitems.connect(accounts[0]).balanceOf(accounts[0].address, 0) });
+      
+      await vault.connect(accounts[0]).contributeVaultParts(1)
+      // expect(await vault.connect(accounts[0]).playerStakedPartsBalance(accounts[0].address)).to.be.equal(1);
+      // expect(await vault.connect(accounts[0]).factionPartsBalance(1)).to.be.equal(1);
     });
   });
 });
