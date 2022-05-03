@@ -26,12 +26,12 @@ contract Player is Ownable {
 
     mapping(address => PlayerData) players;
 
-    GameItems GameItemsContract;
+    GameItems gameItemsContract;
 
     //===============Functions=============
 
     function setGameItems(address _gameItemsAddress) external onlyOwner {
-        GameItemsContract = GameItems(_gameItemsAddress);
+        gameItemsContract = GameItems(_gameItemsAddress);
     }
 
     function joinFaction(uint256 _faction) external {
@@ -70,15 +70,15 @@ contract Player is Ownable {
     function mintCharacter() external {
         require(players[msg.sender].faction != Faction.NONE, "This Player has no faction yet.");
         require(
-            GameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 0,
+            gameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 0,
             "The Player can only mint 1 Character of each type."
         );
-        GameItemsContract.mintCharacter(msg.sender, getFaction(msg.sender));
+        gameItemsContract.mintCharacter(msg.sender, getFaction(msg.sender));
     }
 
     function goOnQuest() external {
         require(
-            GameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 1,
+            gameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 1,
             "The Player does not own a character of this faction."
         );
         require(players[msg.sender].timelock < block.timestamp, "The Player is already on a quest.");
@@ -97,19 +97,19 @@ contract Player is Ownable {
         // TODO: Careful -> block.difficulty probably not available on L2s
         random = uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty))) % 1000;
         if (random >= 800) {
-            GameItemsContract.mintVaultParts(msg.sender, 5);
+            gameItemsContract.mintVaultParts(msg.sender, 5);
             players[msg.sender].multiplier = players[msg.sender].multiplier + 1;
         } else if (random < 800 && random >= 600) {
-            GameItemsContract.mintVaultParts(msg.sender, 4);
+            gameItemsContract.mintVaultParts(msg.sender, 4);
             players[msg.sender].multiplier = players[msg.sender].multiplier + 2;
         } else if (random < 600 && random >= 400) {
-            GameItemsContract.mintVaultParts(msg.sender, 3);
+            gameItemsContract.mintVaultParts(msg.sender, 3);
             players[msg.sender].multiplier = players[msg.sender].multiplier + 3;
         } else if (random < 400 && random >= 200) {
-            GameItemsContract.mintVaultParts(msg.sender, 2);
+            gameItemsContract.mintVaultParts(msg.sender, 2);
             players[msg.sender].multiplier = players[msg.sender].multiplier + 4;
         } else if (random < 200) {
-            GameItemsContract.mintVaultParts(msg.sender, 1);
+            gameItemsContract.mintVaultParts(msg.sender, 1);
             players[msg.sender].multiplier = players[msg.sender].multiplier + 5;
         }
 
