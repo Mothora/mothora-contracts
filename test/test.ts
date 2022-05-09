@@ -299,31 +299,43 @@ describe('MockInteractions', async () => {
 
       // Staking and distributing
 
-      await token.transferFrom(accounts[0].address, accounts[6].address, ethers.BigNumber.from("10000000000000000000000"));
+      await token.transferFrom(
+        accounts[0].address,
+        accounts[6].address,
+        ethers.BigNumber.from('10000000000000000000000')
+      );
       await token.connect(accounts[6]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[6]).stakeTokens(ethers.BigNumber.from("10000000000000000000000"));
+      await vault.connect(accounts[6]).stakeTokens(ethers.BigNumber.from('10000000000000000000000'));
 
-      await ethers.provider.send('evm_increaseTime', [60*35]);
+      await ethers.provider.send('evm_increaseTime', [60 * 35]);
 
-      await token.transferFrom(accounts[0].address, accounts[9].address, ethers.BigNumber.from("10000000000000000000000"));
+      await token.transferFrom(
+        accounts[0].address,
+        accounts[9].address,
+        ethers.BigNumber.from('10000000000000000000000')
+      );
       await token.connect(accounts[9]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[9]).stakeTokens(ethers.BigNumber.from("10000000000000000000000"));
+      await vault.connect(accounts[9]).stakeTokens(ethers.BigNumber.from('10000000000000000000000'));
 
-      await ethers.provider.send('evm_increaseTime', [61*14]);
+      await ethers.provider.send('evm_increaseTime', [61 * 14]);
 
-      await token.transferFrom(accounts[0].address, accounts[5].address, ethers.BigNumber.from("1000000000000000000000"));
+      await token.transferFrom(
+        accounts[0].address,
+        accounts[5].address,
+        ethers.BigNumber.from('1000000000000000000000')
+      );
       await token.connect(accounts[5]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[5]).stakeTokens(ethers.BigNumber.from("1000000000000000000000"));
+      await vault.connect(accounts[5]).stakeTokens(ethers.BigNumber.from('1000000000000000000000'));
 
-      await ethers.provider.send('evm_increaseTime', [61*11]);
+      await ethers.provider.send('evm_increaseTime', [61 * 11]);
 
-      await token.transferFrom(accounts[0].address, accounts[7].address, ethers.BigNumber.from("50000000000000000000"));
+      await token.transferFrom(accounts[0].address, accounts[7].address, ethers.BigNumber.from('50000000000000000000'));
       await token.connect(accounts[7]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[7]).stakeTokens(ethers.BigNumber.from("50000000000000000000"));
+      await vault.connect(accounts[7]).stakeTokens(ethers.BigNumber.from('50000000000000000000'));
 
-      await token.transferFrom(accounts[0].address, accounts[8].address, ethers.BigNumber.from("50000000000000000000"));
+      await token.transferFrom(accounts[0].address, accounts[8].address, ethers.BigNumber.from('50000000000000000000'));
       await token.connect(accounts[8]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[8]).stakeTokens(ethers.BigNumber.from("50000000000000000000"));
+      await vault.connect(accounts[8]).stakeTokens(ethers.BigNumber.from('50000000000000000000'));
 
       await vault.connect(accounts[0]).distributeRewards();
 
@@ -358,9 +370,11 @@ describe('MockInteractions', async () => {
       console.log({ 'playerBal 8': await token.connect(accounts[8]).balanceOf(accounts[8].address) });
       console.log({ 'playerBal 9': await token.connect(accounts[9]).balanceOf(accounts[9].address) });
     });
-    
+
     it('It reverts if the Owner tries to distribute more than once in the same epoch', async () => {
-      await expect(vault.connect(accounts[0]).distributeRewards()).to.be.revertedWith("The player has already claimed in this epoch");
+      await expect(vault.connect(accounts[0]).distributeRewards()).to.be.revertedWith(
+        'The player has already claimed in this epoch'
+      );
     });
 
     it('Owner distributes rewards again on the next epoch', async () => {
@@ -376,6 +390,5 @@ describe('MockInteractions', async () => {
       console.log({ 'rewardsToClaim 8': await vault.connect(accounts[8]).RewardsBalance(accounts[8].address) });
       console.log({ 'rewardsToClaim 9': await vault.connect(accounts[9]).RewardsBalance(accounts[9].address) });
     });
-
   });
 });
