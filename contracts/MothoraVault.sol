@@ -10,6 +10,7 @@ import {GameItems} from "./GameItems.sol";
 import {Essence} from "./Essence.sol";
 
 contract MothoraVault is Ownable, ReentrancyGuard {
+    
     //=========== DEPENDENCIES ============
 
     using SafeERC20 for IERC20;
@@ -51,7 +52,7 @@ contract MothoraVault is Ownable, ReentrancyGuard {
     address[] public playerAddresses;
     uint256 playerId;
 
-    //===============Functions=============
+    //============== CONSTRUCTOR ============
 
     constructor(
         address _tokenAddress,
@@ -68,12 +69,16 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         epochStartTime = block.timestamp;
     }
 
+    //================ VIEWS ===============
+
+
+    //============== FUNCTIONS =============
+
     function stakeTokens(uint256 _amount) external nonReentrant {
         require(_amount > 0, "Amount must be more than 0.");
         uint256 initialStakedAmount = stakedESSBalance[msg.sender];
         essenceAddress.safeTransferFrom(msg.sender, address(this), _amount);
 
-        // Calculate Final State - QUESTION: these lines below should not run if transaction on line 37 reverts
         if (initialStakedAmount == 0) {
             if (playerIds[msg.sender] == 0) {
                 playerId++;
@@ -95,9 +100,8 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         require(_amount > 0, "Amount must be more than 0.");
         require(stakedESSBalance[msg.sender] > 0, "Staking balance cannot be 0");
         require(_amount <= stakedESSBalance[msg.sender], "Cannot unstake more than your staked balance");
-        essenceAddress.safeTransfer(msg.sender, _amount);
 
-        // Calculate Final State - QUESTION: these lines below should not run if transaction on line 54 reverts
+        essenceAddress.safeTransfer(msg.sender, _amount);
         stakedESSBalance[msg.sender] -= _amount;
         totalStakedBalance -= _amount;
     }
@@ -111,8 +115,6 @@ contract MothoraVault is Ownable, ReentrancyGuard {
 
         // Transfer from player to Staking Contract
         gameItemsContract.safeTransferFrom(msg.sender, address(this), 0, _amount, "");
-
-        // Calculate Final State - QUESTION: these lines below should not run if transaction on line 72 reverts
         playerStakedPartsBalance[msg.sender] += _amount;
         factionPartsBalance[playerContract.getFaction(msg.sender)] += _amount;
         totalVaultPartsContributed += _amount;
@@ -154,11 +156,10 @@ contract MothoraVault is Ownable, ReentrancyGuard {
             factor2 = playerStakedPartsBalance[playerAddresses[i - 1]];
             factor3 = factionPartsBalance[playerContract.getFaction(playerAddresses[i - 1])];
 
-            RewardsBalance[playerAddresses[i - 1]] += 
-                divider(factor1 * 70 * epochRewards, maxedFactor1 * 100,0) +
-                divider(factor2 * 25 * epochRewards, maxedFactor2 * 100,0) +
-                divider(factor3 * 5 * epochRewards, maxedFactor3 * 100,0);
-                
+            RewardsBalance[playerAddresses[i - 1]] +=
+                divider(factor1 * 70 * epochRewards, maxedFactor1 * 100, 0) +
+                divider(factor2 * 25 * epochRewards, maxedFactor2 * 100, 0) +
+                divider(factor3 * 5 * epochRewards, maxedFactor3 * 100, 0);
         }
 
         lastDistributionTime = block.timestamp;
@@ -166,13 +167,15 @@ contract MothoraVault is Ownable, ReentrancyGuard {
 
     function claimEpochRewards() external {
         essenceAddress.safeTransfer(msg.sender, RewardsBalance[msg.sender]);
-
-        //QUESTION: these lines below should not run if transaction on line 151 reverts
         RewardsBalance[msg.sender] = 0;
     }
 
-    function divider(uint numerator, uint denominator, uint precision) public pure returns(uint) {
-        return (numerator*(uint(10)**uint(precision+1))/denominator + 5)/uint(10);
+    function divider(
+        uint256 numerator,
+        uint256 denominator,
+        uint256 precision
+    ) public pure returns (uint256) {
+        return ((numerator * (uint256(10)**uint256(precision + 1))) / denominator + 5) / uint256(10);
     }
 
     function _calculateTimeTier(address _recipient) private returns (uint256) {
