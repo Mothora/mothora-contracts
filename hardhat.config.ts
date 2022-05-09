@@ -42,6 +42,12 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC as string,
       },
     },
+    emeraldTestnet: {
+      url: 'https://testnet.emerald.oasis.dev',
+      accounts: {
+        mnemonic: process.env.MNEMONIC as string,
+      },
+    },
     mumbai: {
       url: 'https://eth-mumbai.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {

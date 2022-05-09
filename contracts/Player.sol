@@ -33,7 +33,7 @@ contract Player is Ownable {
         gameItemsContract = GameItems(_gameItemsAddress);
     }
 
-    function joinFaction(uint256 _faction) external {
+    function joinFaction(uint256 _faction) public {
         require(uint256(players[msg.sender].faction) == 0, "This player already has a faction.");
         require(_faction == 1 || _faction == 2 || _faction == 3, "Please select a valid faction.");
         if (_faction == 1) {
@@ -66,13 +66,18 @@ contract Player is Ownable {
         // Joao: instead of burning they could be given away to their current faction
     }
 
-    function mintCharacter() external {
+    function mintCharacter() public {
         require(players[msg.sender].faction != Faction.NONE, "This Player has no faction yet.");
         require(
             gameItemsContract.balanceOf(msg.sender, getFaction(msg.sender)) == 0,
             "The Player can only mint 1 Character of each type."
         );
         gameItemsContract.mintCharacter(msg.sender, getFaction(msg.sender));
+    }
+
+    function joinAndMint(uint256 _faction) external {
+        joinFaction(_faction);
+        mintCharacter();
     }
 
     function goOnQuest() external {
@@ -114,4 +119,7 @@ contract Player is Ownable {
         return uint256(players[_recipient].faction);
     }
 
+    function getQuestTimelock(address _recipient) external view returns (uint256) {
+        return uint256(players[_recipient].timelock);
+    }
 }

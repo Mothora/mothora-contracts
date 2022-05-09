@@ -10,7 +10,6 @@ import {GameItems} from "./GameItems.sol";
 import {Essence} from "./Essence.sol";
 
 contract MothoraVault is Ownable, ReentrancyGuard {
-    
     //=========== DEPENDENCIES ============
 
     using SafeERC20 for IERC20;
@@ -29,7 +28,7 @@ contract MothoraVault is Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) public factionPartsBalance;
 
     // Creating instances of other contracts here
-    IERC20 public essenceAddress;
+    IERC20 public essenceInterface;
     address tokenAddress;
     GameItems gameItemsContract;
     Player playerContract;
@@ -61,7 +60,7 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         uint256 _epochRewardsPercentage,
         uint256 _epochDuration
     ) {
-        essenceAddress = IERC20(_tokenAddress);
+        essenceInterface = IERC20(_tokenAddress);
         gameItemsContract = GameItems(_gameItemsAddress);
         playerContract = Player(_playerContractAddress);
         epochRewardsPercentage = _epochRewardsPercentage;
@@ -71,29 +70,13 @@ contract MothoraVault is Ownable, ReentrancyGuard {
 
     //================ VIEWS ===============
 
-
     //============== FUNCTIONS =============
 
-    function stakeTokens(uint256 _amount) external nonReentrant {
+    function stakeTokens(uint256 _amount) public nonReentrant {
         require(_amount > 0, "Amount must be more than 0.");
-        uint256 initialStakedAmount = stakedESSBalance[msg.sender];
-        essenceAddress.safeTransferFrom(msg.sender, address(this), _amount);
+        essenceInterface.safeTransferFrom(msg.sender, address(this), _amount);
 
-        if (initialStakedAmount == 0) {
-            if (playerIds[msg.sender] == 0) {
-                playerId++;
-                playerIds[msg.sender] = playerId;
-                playerAddresses.push(msg.sender);
-            }
-            lastUpdate[msg.sender] = block.timestamp;
-        } else {
-            stakedDuration[msg.sender] =
-                (block.timestamp - lastUpdate[msg.sender]) *
-                (initialStakedAmount / stakedESSBalance[msg.sender]); //weighted average of balance & time staked
-        }
-
-        stakedESSBalance[msg.sender] += _amount;
-        totalStakedBalance += _amount;
+        _stakeTokens(_amount);
     }
 
     function unstakeTokens(uint256 _amount) external nonReentrant {
@@ -101,7 +84,6 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         require(stakedESSBalance[msg.sender] > 0, "Staking balance cannot be 0");
         require(_amount <= stakedESSBalance[msg.sender], "Cannot unstake more than your staked balance");
 
-        essenceAddress.safeTransfer(msg.sender, _amount);
         stakedESSBalance[msg.sender] -= _amount;
         totalStakedBalance -= _amount;
     }
@@ -165,8 +147,13 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         lastDistributionTime = block.timestamp;
     }
 
-    function claimEpochRewards() external {
-        essenceAddress.safeTransfer(msg.sender, RewardsBalance[msg.sender]);
+    function claimEpochRewards(bool autocompound) external {
+        if (autocompound) {
+            _stakeTokens(RewardsBalance[msg.sender]);
+        } else {
+            essenceInterface.safeTransfer(msg.sender, RewardsBalance[msg.sender]);
+        }
+
         RewardsBalance[msg.sender] = 0;
     }
 
@@ -176,6 +163,42 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         uint256 precision
     ) public pure returns (uint256) {
         return ((numerator * (uint256(10)**uint256(precision + 1))) / denominator + 5) / uint256(10);
+    }
+
+    function getTotalBalance(address _player)
+        external
+        view
+        returns (
+            uint256 balance,
+            uint256 stakedBalance,
+            uint256 pendingRewards
+        )
+    {
+        balance = essenceInterface.balanceOf(_player);
+        stakedBalance = stakedESSBalance[_player];
+        pendingRewards = RewardsBalance[_player];
+
+        return (balance, stakedBalance, pendingRewards);
+    }
+
+    function _stakeTokens(uint256 _amount) internal {
+        uint256 initialStakedAmount = stakedESSBalance[msg.sender];
+
+        if (initialStakedAmount == 0) {
+            if (playerIds[msg.sender] == 0) {
+                playerId++;
+                playerIds[msg.sender] = playerId;
+                playerAddresses.push(msg.sender);
+            }
+            lastUpdate[msg.sender] = block.timestamp;
+        } else {
+            stakedDuration[msg.sender] =
+                (block.timestamp - lastUpdate[msg.sender]) *
+                (initialStakedAmount / stakedESSBalance[msg.sender]); //weighted average of balance & time staked
+        }
+
+        stakedESSBalance[msg.sender] += _amount;
+        totalStakedBalance += _amount;
     }
 
     function _calculateTimeTier(address _recipient) private returns (uint256) {
