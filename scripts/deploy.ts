@@ -10,6 +10,7 @@ import {
   MothoraVault,
   Essence,
 } from '../typechain-types';
+import { wallets } from './walletsToAirdrop';
 
 const waitForTx = async (tx: ContractTransaction) => await tx.wait(1);
 
@@ -49,9 +50,14 @@ async function main() {
 
   // Deploy MothoraVault Contract
   vault = await deployContract(
-    await new MothoraVaultFactory(signer).deploy(token.address, gameItems.address, player.address, 15, 600)
+    await new MothoraVaultFactory(signer).deploy(token.address, gameItems.address, player.address, 300000, 10)
   );
   console.log({ 'MothoraVault contract deployed to': vault.address });
+
+  wallets.forEach(async (wallet) => {
+    await waitForTx(await token.transfer(wallet, '10000'));
+  });
+  console.log('Tokens airdroped');
 }
 
 main()
