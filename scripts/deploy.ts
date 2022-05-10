@@ -54,9 +54,12 @@ async function main() {
   );
   console.log({ 'MothoraVault contract deployed to': vault.address });
 
-  wallets.forEach(async (wallet) => {
-    await waitForTx(await token.transfer(wallet, '10000'));
-  });
+  await Promise.all(
+    wallets.map(async (wallet) => {
+      await waitForTx(await token.transfer(wallet, '5000'));
+    })
+  );
+
   console.log('Tokens airdroped');
 }
 
