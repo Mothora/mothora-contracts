@@ -4,12 +4,13 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Player} from "./Player.sol";
 import {GameItems} from "./GameItems.sol";
 import {Essence} from "./Essence.sol";
 
-contract MothoraVault is Ownable, ReentrancyGuard {
+contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
     //=========== DEPENDENCIES ============
 
     using SafeERC20 for IERC20;
@@ -100,16 +101,6 @@ contract MothoraVault is Ownable, ReentrancyGuard {
         playerStakedPartsBalance[msg.sender] += _amount;
         factionPartsBalance[playerContract.getFaction(msg.sender)] += _amount;
         totalVaultPartsContributed += _amount;
-    }
-
-    function onERC1155Received(
-        address,
-        address,
-        uint256,
-        uint256,
-        bytes memory
-    ) public virtual returns (bytes4) {
-        return this.onERC1155Received.selector;
     }
 
     function distributeRewards() external onlyOwner {
