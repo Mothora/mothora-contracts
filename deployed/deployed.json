@@ -16,5 +16,14 @@
     "Essence": "0x34cD84C089e2c1fe3fDFa3086287FEc6B28f81C1",
 
     "MothoraVault": "0x6052C51f66CA0c337531b59153546491aD852749"
+  },
+  "kovan": {
+    "Player": "0xc00f0DC87784Bf71E61ae3b2F516a05F5BBb93B8",
+
+    "GameItems": "0x2Dd289f7E9b7ebeA4Ca5e4eb64830eA9Bb3DF344",
+
+    "Essence": "0xc2BAC976B130316C9aFD581641651b81C5843069",
+
+    "MothoraVault": "0x20d7e5D10B16b3fcA8Ea2EE93bb704C8B5894Ad5"
   }
 }

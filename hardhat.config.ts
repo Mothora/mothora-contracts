@@ -20,10 +20,17 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC as string,
       },
       gas: 2100000,
-      gasPrice: 8000000000,
+      gasPrice: 65 * GWEI,
     },
     ropsten: {
       url: 'https://eth-ropsten.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
+      accounts: {
+        mnemonic: process.env.MNEMONIC as string,
+      },
+      gasPrice: 65 * GWEI, // Para testnets apenas <!>
+    },
+    kovan: {
+      url: 'https://eth-kovan.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
