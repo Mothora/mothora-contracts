@@ -15,12 +15,10 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
     rinkeby: {
-      url: 'https://eth-rinkeby.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
+      url: 'https://rinkeby.infura.io/v3/' + process.env.INFURA_KEY,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
-      gas: 2100000,
-      gasPrice: 8000000000,
     },
     ropsten: {
       url: 'https://eth-ropsten.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
