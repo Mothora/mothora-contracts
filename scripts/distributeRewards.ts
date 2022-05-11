@@ -16,7 +16,7 @@ async function main() {
   console.log({ Account: signer.address });
 
   const vaultFactory = await ethers.getContractFactory('MothoraVault');
-  vault = await vaultFactory.attach('0xf0713aaC7FCc56fAD8087F425De2f76143Ac079A');
+  vault = await vaultFactory.connect(signer).attach('0xC007A4D0999d9e99c6baB8A8d01C2DBE8af7ec58');
 
   // Deploy Player Contract
   await waitForTx(await vault.connect(signer).distributeRewards());

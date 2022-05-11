@@ -18,6 +18,7 @@
     "stake:rinkeby": "hardhat run --network rinkeby scripts/stake.ts",
     "rewards": "hardhat run --network hardhatevm scripts/rewards.ts",
     "rewards:rinkeby": "hardhat run --network rinkeby scripts/rewards.ts",
+    "distribute:rinkeby": "hardhat run --network rinkeby scripts/distributeRewards.ts",
     "console:rinkeby": "hardhat console --network rinkeby",
     "node:hardhatevm": "hardhat node",
     "compile": "hardhat compile"

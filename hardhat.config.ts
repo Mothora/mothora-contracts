@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC as string,
       },
       gas: 2100000,
-      gasPrice: 100 * GWEI,
+      gasPrice: 8000000000,
     },
     ropsten: {
       url: 'https://eth-ropsten.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
