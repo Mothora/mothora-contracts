@@ -12,7 +12,7 @@ export const deployContract = async <ContractType extends Contract>(instance: Co
 
 async function main() {
   let vault: MothoraVault;
-  const signer = (await ethers.getSigners())[0];
+  const signer = (await ethers.getSigners())[1];
   console.log({ Account: signer.address });
 
   const vaultFactory = await ethers.getContractFactory('MothoraVault');

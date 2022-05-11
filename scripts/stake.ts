@@ -16,19 +16,21 @@ async function main() {
   console.log({ Account: signer.address });
 
   const essenceFactory = await ethers.getContractFactory('Essence');
+  /*
+  const essence = await essenceFactory.attach('0x920B18Cd1913EDA0B0b1D96D6E67C077acC30ddC');
 
-  const essence = await essenceFactory.attach('0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9');
-
-  await essence.approve('0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9', '100000000000000000000000');
+  await essence.approve('0x60FC78D26E5f2CF3078150A821691294FBa2388E', '100000000000000000000000');
 
   console.log('Approving');
+  */
   const vaultFactory = await ethers.getContractFactory('MothoraVault');
 
-  vault = await vaultFactory.attach('0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9');
+  vault = await vaultFactory.attach('0x60FC78D26E5f2CF3078150A821691294FBa2388E');
 
+  /*
   console.log('Staking');
   await waitForTx(await vault.connect(signer).stakeTokens('100000000000000000000000'));
-
+*/
   let stakedBalance = await vault.totalStakedBalance();
   let epochRewards = await vault.epochRewards();
   let epochDuration = await vault.epochDuration();
