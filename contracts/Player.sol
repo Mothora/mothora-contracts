@@ -125,4 +125,8 @@ contract Player is Ownable {
         }
         return false;
     }
+
+    function getHasRewards(address _recipient) external view returns (bool) {
+        return players[_recipient].characterFullofRewards;
+    }
 }

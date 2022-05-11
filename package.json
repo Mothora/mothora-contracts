@@ -13,6 +13,8 @@
     "goerli": "hardhat run --network goerli scripts/deploy.ts",
     "kovan": "hardhat run --network kovan scripts/deploy.ts",
     "emerald:testnet": "hardhat run --network emeraldTestnet scripts/deploy.ts",
+    "rewards:rinkeby": "hardhat run --network rinkeby scripts/distributeRewards.ts",
+    "console:rinkeby": "hardhat console --network rinkeby",
     "node": "hardhat node",
     "compile": "hardhat compile"
   },
