@@ -15,8 +15,8 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
     rinkeby: {
-      //url: 'https://rinkeby.infura.io/v3/' + process.env.INFURA_KEY,
-      url: 'https://eth-rinkeby.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
+      url: 'https://rinkeby.infura.io/v3/' + process.env.INFURA_KEY,
+      //url: 'https://eth-rinkeby.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },

@@ -19,16 +19,15 @@ async function main() {
   vault = await vaultFactory.connect(signer).attach('0xC007A4D0999d9e99c6baB8A8d01C2DBE8af7ec58');
 
   // Deploy Player Contract
-  await waitForTx(await vault.connect(signer).distributeRewards());
-  /*
+  //await waitForTx(await vault.connect(signer).distributeRewards());
+
   async function execute1(delay: number) {
     console.log(1);
     // I use axios like: axios.get('/user?ID=12345').then
     await waitForTx(await vault.connect(signer).distributeRewards());
     setTimeout(() => execute1(delay), delay);
   }
-  execute1(2000);
-  */
+  execute1(11000);
 }
 
 main();

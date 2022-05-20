@@ -17,13 +17,13 @@
 
     "MothoraVault": "0xC007A4D0999d9e99c6baB8A8d01C2DBE8af7ec58"
   },
-  "kovan": {
-    "Player": "0x4D3C09A1BbC80724ca412A2bc13f751E475dB245",
+  "arbitrumRinkeby": {
+    "Player": "0x4Bc5fd741d384A8E65AED56D8E1e45B46d4BfED5",
 
-    "GameItems": "0xa85743A8b9e7F7bEf4765f1a47Ab209Bb4Cf652B",
+    "GameItems": "0x03aE3dfc6D36a84522BB4E5bf30682106Fbe7Ce6",
 
-    "Essence": "0xc3e1b352875eCB0553838f4Ff12cFa51a9753704",
+    "Essence": "0xf2d9012495218Ce81730A73F22300A112bA3a5E8",
 
-    "MothoraVault": "0x95B8aEB8c76637481acB2F5095C2BAF716CDd044"
+    "MothoraVault": "0x4d22Bfe8De6B4F508B4335C7540716669864dc81"
   }
 }
