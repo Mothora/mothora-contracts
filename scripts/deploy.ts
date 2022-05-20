@@ -24,7 +24,7 @@ async function main() {
   let gameItems: GameItems;
   let vault: MothoraVault;
   let token: Essence;
-  const signer = (await ethers.getSigners())[0];
+  const signer = (await ethers.getSigners())[1];
   console.log({ Account: signer.address });
 
   // Deploy Player Contract
@@ -54,9 +54,12 @@ async function main() {
   );
   console.log({ 'MothoraVault contract deployed to': vault.address });
 
-  wallets.forEach(async (wallet) => {
-    await waitForTx(await token.transfer(wallet, '10000'));
-  });
+  await Promise.all(
+    wallets.map(async (wallet) => {
+      await waitForTx(await token.connect(signer).transfer(wallet, '5000'));
+    })
+  );
+
   console.log('Tokens airdroped');
 }
 

@@ -119,7 +119,14 @@ contract Player is Ownable {
         return uint256(players[_recipient].faction);
     }
 
-    function getQuestTimelock(address _recipient) external view returns (uint256) {
-        return uint256(players[_recipient].timelock);
+    function getQuestIsLocked(address _recipient) external view returns (bool) {
+        if (players[_recipient].timelock > block.timestamp) {
+            return true;
+        }
+        return false;
+    }
+
+    function getHasRewards(address _recipient) external view returns (bool) {
+        return players[_recipient].characterFullofRewards;
     }
 }
