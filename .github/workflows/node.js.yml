@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.15.0]
+        node-version: [16.16.0]
 
     steps:
       - uses: actions/checkout@v2
@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Run Game Mock Tests
-        run: yarn test
+        run: yarn test:mock
         env:
           MNEMONIC: ${{ secrets.MNEMONIC }}
           ALCHEMY_TOKEN: ${{ secrets.ALCHEMY_TOKEN }}
