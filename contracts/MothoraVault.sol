@@ -107,6 +107,7 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
         require(totalStakedBalance > 0, "There are no tokens staked");
         uint256 lastEpochTime = epochStartTime + epochDuration * (((block.timestamp - epochStartTime) / epochDuration));
         require(lastDistributionTime < lastEpochTime, "The player has already claimed in this epoch");
+        // total staked balance * APR percentage * 10min/1 year -> rewards in a given epoch of 10 minute
         epochRewards = divider(totalStakedBalance * epochRewardsPercentage * 600, 31536000 * 100, 0);
 
         address[] memory _playerAddresses = playerAddresses;
@@ -146,8 +147,6 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
                     divider(factor2 * 25 * _epochRewards, maxedFactor2 * 100, 0) +
                     divider(factor3 * 5 * _epochRewards, maxedFactor3 * 100, 0);
             }
-
-            lastDistributionTime = block.timestamp;
         } else {
             // Distributes the rewards
             for (uint256 i = 1; i <= playerId; i = unsafeInc(i)) {
@@ -155,9 +154,8 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
 
                 RewardsBalance[playerAddresses[i - 1]] += divider(factor1 * epochRewards, maxedFactor1, 0);
             }
-
-            lastDistributionTime = block.timestamp;
         }
+        lastDistributionTime = block.timestamp;
     }
 
     function claimEpochRewards(bool autocompound) external {

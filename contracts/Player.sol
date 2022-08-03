@@ -133,14 +133,14 @@ contract Player is VRFConsumerBaseV2, Ownable {
         players[msg.sender].characterFullofRewards = true;
     }
 
-    function claimQuestRewards() external returns (uint256 s_requestId) {
+    function claimQuestRewards() external {
         require(
             players[msg.sender].characterFullofRewards == true,
             "The Player has to go on a quest first to claim its rewards."
         );
         require(players[msg.sender].timelock < block.timestamp, "The Player is still on a quest.");
 
-        s_requestId = COORDINATOR.requestRandomWords(
+        uint256 s_requestId = COORDINATOR.requestRandomWords(
             keyHash,
             s_subscriptionId,
             requestConfirmations,

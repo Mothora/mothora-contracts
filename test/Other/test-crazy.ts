@@ -1,10 +1,10 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { GameItems } from '../typechain-types';
-import { Player } from '../typechain-types';
-import { MothoraVault } from '../typechain-types';
-import { Essence } from '../typechain-types';
+import { GameItems } from '../../typechain-types';
+import { Player } from '../../typechain-types';
+import { MothoraVault } from '../../typechain-types';
+import { Essence } from '../../typechain-types';
 
 describe('MockInteractions', async () => {
   let player: Player;
@@ -12,13 +12,14 @@ describe('MockInteractions', async () => {
   let vault: MothoraVault;
   let token: Essence;
   let accounts: SignerWithAddress[];
+  const subscriptionId = 4948;
 
   before(async () => {
     accounts = await ethers.getSigners();
 
     // Deploy Player Contract
     const PlayerContractFactory = await ethers.getContractFactory('Player');
-    player = await PlayerContractFactory.deploy();
+    player = await PlayerContractFactory.deploy(subscriptionId);
     await player.deployed();
     console.log({ 'Player contract deployed to': player.address });
 
@@ -41,7 +42,7 @@ describe('MockInteractions', async () => {
     // Deploy MothoraVault Contract
     const MothoraVaultFactory = await ethers.getContractFactory('MothoraVault');
 
-    vault = await MothoraVaultFactory.deploy(token.address, gameitems.address, player.address, 15, 600);
+    vault = await MothoraVaultFactory.deploy(token.address, gameitems.address, player.address, 300000, 10);
     await vault.deployed();
     console.log({ 'MothoraVault contract deployed to': vault.address });
   });
@@ -234,67 +235,6 @@ describe('MockInteractions', async () => {
 
     it('It distributes the epoch rewards according to excel example and players claim', async () => {
       // Setting up the player quests and vault parts contribution
-      await player.connect(accounts[5]).joinFaction(1);
-      await player.connect(accounts[5]).mintCharacter();
-      await player.connect(accounts[5]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[5]).claimQuestRewards();
-      await player.connect(accounts[5]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[5]).claimQuestRewards();
-      await player.connect(accounts[5]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[5]).claimQuestRewards();
-      await player.connect(accounts[5]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[5]).claimQuestRewards();
-      await player.connect(accounts[5]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[5]).claimQuestRewards();
-      await gameitems.connect(accounts[5]).setApprovalForAll(vault.address, true);
-      await vault.connect(accounts[5]).contributeVaultParts(await gameitems.balanceOf(accounts[5].address, 0));
-
-      await player.connect(accounts[7]).joinFaction(2);
-      await player.connect(accounts[7]).mintCharacter();
-      await player.connect(accounts[7]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[7]).claimQuestRewards();
-      await player.connect(accounts[7]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[7]).claimQuestRewards();
-      await gameitems.connect(accounts[7]).setApprovalForAll(vault.address, true);
-      await vault.connect(accounts[7]).contributeVaultParts(await gameitems.balanceOf(accounts[7].address, 0));
-
-      await player.connect(accounts[8]).joinFaction(2);
-      await player.connect(accounts[8]).mintCharacter();
-      await player.connect(accounts[8]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[8]).claimQuestRewards();
-      await player.connect(accounts[8]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[8]).claimQuestRewards();
-      await gameitems.connect(accounts[8]).setApprovalForAll(vault.address, true);
-      await vault.connect(accounts[8]).contributeVaultParts(await gameitems.balanceOf(accounts[8].address, 0));
-
-      await player.connect(accounts[9]).joinFaction(2);
-      await player.connect(accounts[9]).mintCharacter();
-      await player.connect(accounts[9]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[9]).claimQuestRewards();
-      await player.connect(accounts[9]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[9]).claimQuestRewards();
-      await player.connect(accounts[9]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[9]).claimQuestRewards();
-      await player.connect(accounts[9]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[9]).claimQuestRewards();
-      await player.connect(accounts[9]).goOnQuest();
-      await ethers.provider.send('evm_increaseTime', [61]);
-      await player.connect(accounts[9]).claimQuestRewards();
-      await gameitems.connect(accounts[9]).setApprovalForAll(vault.address, true);
-      await vault.connect(accounts[9]).contributeVaultParts(await gameitems.balanceOf(accounts[9].address, 0));
 
       // Staking and distributing
 
@@ -306,44 +246,25 @@ describe('MockInteractions', async () => {
       await token.connect(accounts[6]).approve(vault.address, ethers.constants.MaxUint256);
       await vault.connect(accounts[6]).stakeTokens(ethers.BigNumber.from('10000000000000000000000'));
 
-      await ethers.provider.send('evm_increaseTime', [60 * 35]);
+      let [balance, stakedBalance, pendingRewards] = await vault
+        .connect(accounts[6])
+        .getTotalBalance(accounts[6].address);
 
-      await token.transferFrom(
-        accounts[0].address,
-        accounts[9].address,
-        ethers.BigNumber.from('10000000000000000000000')
-      );
-      await token.connect(accounts[9]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[9]).stakeTokens(ethers.BigNumber.from('10000000000000000000000'));
-
-      await ethers.provider.send('evm_increaseTime', [61 * 14]);
-
-      await token.transferFrom(
-        accounts[0].address,
-        accounts[5].address,
-        ethers.BigNumber.from('1000000000000000000000')
-      );
-      await token.connect(accounts[5]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[5]).stakeTokens(ethers.BigNumber.from('1000000000000000000000'));
-
-      await ethers.provider.send('evm_increaseTime', [61 * 11]);
-
-      await token.transferFrom(accounts[0].address, accounts[7].address, ethers.BigNumber.from('50000000000000000000'));
-      await token.connect(accounts[7]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[7]).stakeTokens(ethers.BigNumber.from('50000000000000000000'));
-
-      await token.transferFrom(accounts[0].address, accounts[8].address, ethers.BigNumber.from('50000000000000000000'));
-      await token.connect(accounts[8]).approve(vault.address, ethers.constants.MaxUint256);
-      await vault.connect(accounts[8]).stakeTokens(ethers.BigNumber.from('50000000000000000000'));
+      await ethers.provider.send('evm_increaseTime', [11]);
 
       await vault.connect(accounts[0]).distributeRewards();
+      [balance, stakedBalance, pendingRewards] = await vault.connect(accounts[6]).getTotalBalance(accounts[6].address);
 
       // Claiming the rewards
-      await vault.connect(accounts[5]).claimEpochRewards(false);
-      await vault.connect(accounts[6]).claimEpochRewards(false);
-      await vault.connect(accounts[7]).claimEpochRewards(false);
-      await vault.connect(accounts[8]).claimEpochRewards(false);
-      await vault.connect(accounts[9]).claimEpochRewards(false);
+      await vault.connect(accounts[6]).claimEpochRewards(true);
+
+      await ethers.provider.send('evm_increaseTime', [11]);
+
+      await vault.connect(accounts[0]).distributeRewards();
+      [balance, stakedBalance, pendingRewards] = await vault.connect(accounts[6]).getTotalBalance(accounts[6].address);
+
+      // Claiming the rewards
+      await vault.connect(accounts[6]).claimEpochRewards(true);
     });
 
     it('It reverts if the Owner tries to distribute more than once in the same epoch', async () => {

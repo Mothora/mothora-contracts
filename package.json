@@ -23,7 +23,8 @@
     "distribute:rinkeby": "hardhat run --network rinkeby scripts/distributeRewards.ts",
     "console:rinkeby": "hardhat console --network rinkeby",
     "node:hardhatevm": "hardhat node",
-    "compile": "hardhat compile"
+    "compile": "hardhat compile",
+    "coverage": "hardhat coverage --testfiles 'test/test-mock.ts'"
   },
   "keywords": [
     "hardhat",
