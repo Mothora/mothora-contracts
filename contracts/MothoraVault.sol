@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -42,13 +42,6 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
     uint256 public epochRewardsPercentage;
     uint256 public epochDuration;
     uint256 public epochStartTime;
-    uint256 public lastEpochTime;
-    uint256 public maxedFactor1;
-    uint256 public maxedFactor2;
-    uint256 public maxedFactor3;
-    uint256 public factor1;
-    uint256 public factor2;
-    uint256 public factor3;
     address[] public playerAddresses;
     uint256 public playerId;
 
@@ -96,23 +89,41 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
             "The Player does not have enough Vault Parts"
         );
 
-        // Transfer from player to Staking Contract
-        gameItemsContract.safeTransferFrom(msg.sender, address(this), 0, _amount, "");
         playerStakedPartsBalance[msg.sender] += _amount;
         factionPartsBalance[playerContract.getFaction(msg.sender)] += _amount;
         totalVaultPartsContributed += _amount;
+
+        // Transfer from player to Staking Contract
+        gameItemsContract.safeTransferFrom(msg.sender, address(this), 0, _amount, "");
+    }
+
+    function unsafeInc(uint256 x) private pure returns (uint256) {
+        unchecked {
+            return x + 1;
+        }
     }
 
     function distributeRewards() external onlyOwner {
         require(totalStakedBalance > 0, "There are no tokens staked");
-        lastEpochTime = epochStartTime + epochDuration * (((block.timestamp - epochStartTime) / epochDuration));
+        uint256 lastEpochTime = epochStartTime + epochDuration * (((block.timestamp - epochStartTime) / epochDuration));
         require(lastDistributionTime < lastEpochTime, "The player has already claimed in this epoch");
+        // total staked balance * APR percentage * 10min/1 year -> rewards in a given epoch of 10 minute
         epochRewards = divider(totalStakedBalance * epochRewardsPercentage * 600, 31536000 * 100, 0);
 
-        // World level maxedfactors calculation
-        maxedFactor1 = 0;
-        for (uint256 i = 1; i <= playerId; i++) {
-            maxedFactor1 += stakedESSBalance[playerAddresses[i - 1]] * _calculateTimeTier(playerAddresses[i - 1]);
+        address[] memory _playerAddresses = playerAddresses;
+        uint256 _playerId = playerId;
+        uint256 _epochRewards = epochRewards;
+        uint256 maxedFactor1 = 0;
+        uint256 maxedFactor2 = 0;
+        uint256 maxedFactor3 = 0;
+        uint256 factor1 = 0;
+        uint256 factor2 = 0;
+        uint256 factor3 = 0;
+
+        for (uint256 i = 1; i <= _playerId; i = unsafeInc(i)) {
+            if (stakedESSBalance[_playerAddresses[i - 1]] > 0) {
+                maxedFactor1 += stakedESSBalance[_playerAddresses[i - 1]] * _calculateTimeTier(_playerAddresses[i - 1]);
+            }
         }
 
         maxedFactor2 = totalVaultPartsContributed;
@@ -124,42 +135,38 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
             playerContract.totalFactionMembers(3) *
             factionPartsBalance[3];
 
-        if (totalVaultPartsContributed != 0) {
+        if (maxedFactor2 != 0) {
             // Distributes the rewards
-            for (uint256 i = 1; i <= playerId; i++) {
-                factor1 = (stakedESSBalance[playerAddresses[i - 1]] * _calculateTimeTier(playerAddresses[i - 1]));
-                factor2 = playerStakedPartsBalance[playerAddresses[i - 1]];
-                factor3 = factionPartsBalance[playerContract.getFaction(playerAddresses[i - 1])];
+            for (uint256 i = 1; i <= playerId; i = unsafeInc(i)) {
+                factor1 = (stakedESSBalance[playerAddresses[i - 1]] * _calculateTimeTier(_playerAddresses[i - 1]));
+                factor2 = playerStakedPartsBalance[_playerAddresses[i - 1]];
+                factor3 = factionPartsBalance[playerContract.getFaction(_playerAddresses[i - 1])];
 
-                RewardsBalance[playerAddresses[i - 1]] +=
-                    divider(factor1 * 70 * epochRewards, maxedFactor1 * 100, 0) +
-                    divider(factor2 * 25 * epochRewards, maxedFactor2 * 100, 0) +
-                    divider(factor3 * 5 * epochRewards, maxedFactor3 * 100, 0);
+                RewardsBalance[_playerAddresses[i - 1]] +=
+                    divider(factor1 * 70 * _epochRewards, maxedFactor1 * 100, 0) +
+                    divider(factor2 * 25 * _epochRewards, maxedFactor2 * 100, 0) +
+                    divider(factor3 * 5 * _epochRewards, maxedFactor3 * 100, 0);
             }
-
-            lastDistributionTime = block.timestamp;
         } else {
             // Distributes the rewards
-            for (uint256 i = 1; i <= playerId; i++) {
+            for (uint256 i = 1; i <= playerId; i = unsafeInc(i)) {
                 factor1 = (stakedESSBalance[playerAddresses[i - 1]] * _calculateTimeTier(playerAddresses[i - 1]));
-                factor2 = playerStakedPartsBalance[playerAddresses[i - 1]];
-                factor3 = factionPartsBalance[playerContract.getFaction(playerAddresses[i - 1])];
 
                 RewardsBalance[playerAddresses[i - 1]] += divider(factor1 * epochRewards, maxedFactor1, 0);
             }
-
-            lastDistributionTime = block.timestamp;
         }
+        lastDistributionTime = block.timestamp;
     }
 
     function claimEpochRewards(bool autocompound) external {
-        if (autocompound) {
-            _stakeTokens(RewardsBalance[msg.sender]);
-        } else {
-            essenceInterface.safeTransfer(msg.sender, RewardsBalance[msg.sender]);
-        }
-
+        uint256 transferValue = RewardsBalance[msg.sender];
         RewardsBalance[msg.sender] = 0;
+
+        if (autocompound) {
+            _stakeTokens(transferValue);
+        } else {
+            essenceInterface.safeTransfer(msg.sender, transferValue);
+        }
     }
 
     function divider(
@@ -186,6 +193,18 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
         return (balance, stakedBalance, pendingRewards);
     }
 
+    function getPlayerVaultPartsBalance(address _player) external view returns (uint256 playerVaultPartsBalance) {
+        playerVaultPartsBalance = playerStakedPartsBalance[_player];
+
+        return playerVaultPartsBalance;
+    }
+
+    function getFactionVaultPartsBalance(uint256 _faction) external view returns (uint256 factionVaultPartsBalance) {
+        factionVaultPartsBalance = factionPartsBalance[_faction];
+
+        return factionVaultPartsBalance;
+    }
+
     function _stakeTokens(uint256 _amount) internal {
         uint256 initialStakedAmount = stakedESSBalance[msg.sender];
 
@@ -209,13 +228,14 @@ contract MothoraVault is Ownable, ReentrancyGuard, ERC1155Holder {
     function _calculateTimeTier(address _recipient) private returns (uint256) {
         stakedDuration[_recipient] += (block.timestamp - lastUpdate[_recipient]);
         lastUpdate[_recipient] = block.timestamp;
-        if (stakedDuration[_recipient] <= 600) {
+        uint256 stakedDurationLocal = stakedDuration[_recipient];
+        if (stakedDurationLocal <= 600) {
             timeTier[_recipient] = 10;
-        } else if (stakedDuration[_recipient] > 600 && stakedDuration[_recipient] <= 1200) {
+        } else if (stakedDurationLocal > 600 && stakedDurationLocal <= 1200) {
             timeTier[_recipient] = 13;
-        } else if (stakedDuration[_recipient] > 1200 && stakedDuration[_recipient] <= 3000) {
+        } else if (stakedDurationLocal > 1200 && stakedDurationLocal <= 3000) {
             timeTier[_recipient] = 16;
-        } else if (stakedDuration[_recipient] > 3000) {
+        } else if (stakedDurationLocal > 3000) {
             timeTier[_recipient] = 20;
         }
         return timeTier[_recipient];

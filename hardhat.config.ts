@@ -57,11 +57,11 @@ const config: HardhatUserConfig = {
       },
     },
     mumbai: {
-      url: 'https://eth-mumbai.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
+      url: 'https://polygon-mumbai.g.alchemy.com/v2/' + process.env.ALCHEMY_MUMBAI_APP,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
-      gasPrice: 1000000000,
+      gasPrice: 1100000000,
     },
     hardhat: {
       // gasPrice: 0,
@@ -84,7 +84,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.13',
+        version: '0.8.15',
         settings: {
           optimizer: {
             enabled: true,

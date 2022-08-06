@@ -25,11 +25,12 @@ async function main() {
   let vault: MothoraVault;
   let token: Essence;
   const signer = (await ethers.getSigners())[1];
+  const subscriptionId = 4948;
   console.log({ Account: signer.address });
 
   // Deploy Player Contract
 
-  player = await deployContract(await new PlayerFactory(signer).deploy());
+  player = await deployContract(await new PlayerFactory(signer).deploy(subscriptionId));
 
   console.log({ 'Player contract deployed to': player.address });
 
