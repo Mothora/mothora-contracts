@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
-import {GameItems} from "./GameItems.sol";
+import {GameItems} from "./modules/GameItems.sol";
 
 contract Player is VRFConsumerBaseV2, Ownable {
     //===============Storage===============

@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "./interfaces/IEssenceField.sol";
-import "./interfaces/IFlow.sol";
+import "../interfaces/IEssenceField.sol";
+import "../interfaces/IFlow.sol";
 
 /// wallet controlled by trusted team members. Admin role aka ESSENCE_FIELD_CREATOR_ROLE, as initialized during init()
 /// to msg.sender can:

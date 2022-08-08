@@ -5,7 +5,6 @@
   "main": "hardhat.config.ts",
   "scripts": {
     "test": "hardhat compile && hardhat test",
-    "test:crazy": "hardhat compile && hardhat test test/test-crazy.ts",
     "test:mock": "hardhat compile && hardhat test test/test-mock.ts",
     "local": "hardhat run --network hardhatevm scripts/deploy.ts",
     "arbitrumRinkeby": "hardhat run --network arbitrumRinkeby scripts/deploy.ts",
@@ -62,6 +61,8 @@
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.6.9",
     "hardhat": "^2.10.1",
+    "hardhat-deploy": "^0.11.12",
+    "hardhat-deploy-ethers": "^0.3.0-beta.13",
     "hardhat-gas-reporter": "^1.0.8",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23",
