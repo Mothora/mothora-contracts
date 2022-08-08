@@ -134,11 +134,11 @@ describe.only('EssenceAbsorber', function () {
       }
     }
 
-    artifactPowerTable[2][0] = artifactPowerTable[1][0];
-    artifactPowerTable[2][1] = artifactPowerTable[1][1];
-    artifactPowerTable[2][2] = artifactPowerTable[1][2];
-    artifactPowerTable[2][3] = artifactPowerTable[1][3];
-    artifactPowerTable[2][4] = artifactPowerTable[1][4];
+    artifactPowerTable[1][0] = artifactPowerTable[0][0];
+    artifactPowerTable[1][1] = artifactPowerTable[0][1];
+    artifactPowerTable[1][2] = artifactPowerTable[0][2];
+    artifactPowerTable[1][3] = artifactPowerTable[0][3];
+    artifactPowerTable[1][4] = artifactPowerTable[0][4];
 
     await expect(essenceAbsorber.connect(hackerSigner).setArtifactPowerTable(artifactPowerTable)).to.be.reverted;
     await essenceAbsorber.setArtifactPowerTable(artifactPowerTable);
@@ -689,7 +689,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 0,
             },
-            boost: ethers.utils.parseEther('0.008'),
+            power: ethers.utils.parseEther('0.008'),
           },
           {
             nft: absorberRods.address,
@@ -699,7 +699,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 0,
             },
-            boost: ethers.utils.parseEther('0.067'),
+            power: ethers.utils.parseEther('0.067'),
           },
           {
             nft: absorberRods.address,
@@ -709,7 +709,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 0,
             },
-            boost: ethers.utils.parseEther('0.073'),
+            power: ethers.utils.parseEther('0.073'),
           },
           {
             nft: artifact.address,
@@ -719,7 +719,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 0,
             },
-            boost: ethers.utils.parseEther('6'),
+            power: ethers.utils.parseEther('6'),
           },
           {
             nft: artifact.address,
@@ -729,7 +729,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 1,
             },
-            boost: ethers.utils.parseEther('2'),
+            power: ethers.utils.parseEther('2'),
           },
           {
             nft: artifact.address,
@@ -739,7 +739,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 2,
             },
-            boost: ethers.utils.parseEther('0.75'),
+            power: ethers.utils.parseEther('0.75'),
           },
           {
             nft: artifact.address,
@@ -749,7 +749,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 1,
               artifactRarity: 2,
             },
-            boost: ethers.utils.parseEther('0'),
+            power: ethers.utils.parseEther('0'),
           },
           {
             nft: artifact.address,
@@ -759,7 +759,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 1,
               artifactRarity: 1,
             },
-            boost: ethers.utils.parseEther('0.25'),
+            power: ethers.utils.parseEther('0.25'),
           },
         ];
 
@@ -797,14 +797,14 @@ describe.only('EssenceAbsorber', function () {
           await expect(essenceAbsorber.stakeAbsorberRods(1, 0)).to.be.revertedWith('Amount is 0');
         });
 
-        it('Max 20 absorberRodss per wallet', async function () {
+        it('Max 20 absorberRods per wallet', async function () {
           for (let index = 0; index < 5; index++) {
             await absorberRods.functions['mint(address,uint256,uint256)'](staker1, index, 5);
             await absorberRods.connect(staker1Signer).setApprovalForAll(essenceAbsorber.address, true);
 
             if (index == 4) {
               await expect(essenceAbsorber.connect(staker1Signer).stakeAbsorberRods(index, 5)).to.be.revertedWith(
-                'Max 20 absorberRodss per wallet'
+                'Max 20 absorberRods per wallet'
               );
             } else {
               await essenceAbsorber.connect(staker1Signer).stakeAbsorberRods(index, 5);
@@ -812,7 +812,7 @@ describe.only('EssenceAbsorber', function () {
           }
         });
 
-        it('stake powers', async function () {
+        it('staking power', async function () {
           let totalPower = ethers.utils.parseEther('0');
 
           for (let index = 0; index < powerScenarios.length; index++) {
@@ -820,7 +820,6 @@ describe.only('EssenceAbsorber', function () {
 
             if (scenario.nft == absorberRods.address) {
               const powerBefore = await essenceAbsorber.powers(staker1);
-
               await absorberRods.functions['mint(address,uint256,uint256)'](staker1, scenario.tokenId, scenario.amount);
               await absorberRods.connect(staker1Signer).setApprovalForAll(essenceAbsorber.address, true);
               await expect(essenceAbsorber.connect(staker1Signer).stakeAbsorberRods(scenario.tokenId, scenario.amount))
@@ -855,11 +854,7 @@ describe.only('EssenceAbsorber', function () {
         it('NFT already staked', async function () {
           let metadata = {
             artifactGeneration: 0,
-            artifactClass: 0,
             artifactRarity: 0,
-            questLevel: 0,
-            craftLevel: 0,
-            constellationRanks: [0, 1, 2, 3, 4, 5],
           };
           await mockIArtifactMetadataStore.mock.metadataForArtifact.withArgs(0).returns(metadata);
 
@@ -874,11 +869,7 @@ describe.only('EssenceAbsorber', function () {
         it('Max 3 artifacts per wallet', async function () {
           let metadata = {
             artifactGeneration: 1,
-            artifactClass: 0,
             artifactRarity: 0,
-            questLevel: 0,
-            craftLevel: 0,
-            constellationRanks: [0, 1, 2, 3, 4, 5],
           };
 
           for (let index = 0; index < 4; index++) {
@@ -897,11 +888,7 @@ describe.only('EssenceAbsorber', function () {
         it('Max 1 1/1 artifact per wallet', async function () {
           let metadata = {
             artifactGeneration: 0,
-            artifactClass: 0,
             artifactRarity: 0,
-            questLevel: 0,
-            craftLevel: 0,
-            constellationRanks: [0, 1, 2, 3, 4, 5],
           };
           await mockIArtifactMetadataStore.mock.metadataForArtifact.withArgs(0).returns(metadata);
           await artifact.mint(staker1);
