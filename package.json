@@ -4,8 +4,8 @@
   "description": "Mothora Alpha Proof Of Concept Contracts",
   "main": "hardhat.config.ts",
   "scripts": {
-    "test": "hardhat compile && hardhat test  ./test/*.test.ts",
-    "test:mock": "hardhat compile && hardhat test test/test-mock.ts",
+    "test": "hardhat compile && hardhat test ./test/*.test.ts",
+    "test:game": "hardhat compile && hardhat test test/Game.test.ts",
     "local": "hardhat run --network hardhatevm scripts/deploy.ts",
     "arbitrumRinkeby": "hardhat run --network arbitrumRinkeby scripts/deploy.ts",
     "rinkeby": "hardhat run --network rinkeby scripts/deploy.ts",

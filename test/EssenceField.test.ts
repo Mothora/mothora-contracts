@@ -29,7 +29,7 @@ describe.only('EssenceField', function () {
     deployerSigner = await ethers.provider.getSigner(deployer);
   });
 
-  describe('use proxy', function () {
+  describe('Usage of proxy', function () {
     beforeEach(async function () {
       await deployments.fixture(['EssenceField'], { fallbackToGlobal: true });
 
@@ -47,28 +47,28 @@ describe.only('EssenceField', function () {
       // await essenceField.init(essenceToken.address);
     });
 
-    it('init()', async function () {
+    it('Reverts on contract already initialized', async function () {
       await expect(essenceField.init(essenceToken.address)).to.be.revertedWith(
         'Initializable: contract is already initialized'
       );
     });
 
-    it('essence()', async function () {
+    it('Verifies essence token is correct', async function () {
       expect(await essenceField.essence()).to.be.equal(essenceToken.address);
     });
 
-    it('ESSENCE_FIELD_CREATOR_ROLE()', async function () {
+    it('Verifies keccak256 of ESSENCE_FIELD_CREATOR_ROLE to be correct', async function () {
       expect(await essenceField.ESSENCE_FIELD_CREATOR_ROLE()).to.be.equal(
-        '0x275f12656528ceae7cba2736a15cb4ce098fc404b67e9825ec13a82aaf8fabec'
+        '0x7bf6ef789eb80773c7781b0e42ea7bca86828f4880d963549f5b220bf0301e5a'
       );
     });
 
-    it('hasRole()', async function () {
+    it('Verifies that the ESSENCE_FIELD_CREATOR_ROLE is correctly assigned)', async function () {
       const ESSENCE_FIELD_CREATOR_ROLE = await essenceField.ESSENCE_FIELD_CREATOR_ROLE();
       expect(await essenceField.hasRole(ESSENCE_FIELD_CREATOR_ROLE, deployer)).to.be.true;
     });
 
-    it('grantRole()', async function () {
+    it('Grants correctly the ESSENCE_FIELD_CREATOR_ROLE to anyone', async function () {
       const ESSENCE_FIELD_CREATOR_ROLE = await essenceField.ESSENCE_FIELD_CREATOR_ROLE();
 
       expect(await essenceField.hasRole(ESSENCE_FIELD_CREATOR_ROLE, hacker)).to.be.false;
@@ -78,7 +78,7 @@ describe.only('EssenceField', function () {
       expect(await essenceField.hasRole(ESSENCE_FIELD_CREATOR_ROLE, hacker)).to.be.true;
     });
 
-    it('addFlow()', async function () {
+    it('Adds a flow of rewards, reverting if wrong address is used', async function () {
       const totalRewards = ethers.utils.parseEther('1');
       const startTimestamp = await getCurrentTime();
       const timeDelta = 2000;
@@ -98,7 +98,7 @@ describe.only('EssenceField', function () {
       expect(await essenceField.getPendingRewards(flow1)).to.be.equal(ratePerSecond.mul(currentTime - startTimestamp));
     });
 
-    describe('with flows', function () {
+    describe('Flow management', function () {
       let flowsDetails: any[];
       let timestamps: any[];
 
@@ -146,15 +146,16 @@ describe.only('EssenceField', function () {
             _flow.endTimestamp,
             false
           );
+          // ensures essence field has enough rewards for each of the flows provided
           await essenceToken.mint(essenceField.address, _flow.totalRewards);
         }
       });
 
-      it('getFlows()', async function () {
+      it('Gets all flows correctly', async function () {
         expect(await essenceField.getFlows()).to.be.deep.equal([flow1, flow2, flow3]);
       });
 
-      it('addFlow()', async function () {
+      it('Reverts on adding a flow that already exists', async function () {
         const totalRewards = ethers.utils.parseEther('1');
         const startTimestamp = await getCurrentTime();
         const timeDelta = 2000;
@@ -165,7 +166,7 @@ describe.only('EssenceField', function () {
         );
       });
 
-      it('getRatePerSecond()', async function () {
+      it('Gets correctly the rate per second', async function () {
         await mineBlock(flowsDetails[0].startTimestamp + 300);
 
         for (let index = 0; index < flowsDetails.length; index++) {
@@ -175,7 +176,7 @@ describe.only('EssenceField', function () {
         }
       });
 
-      it('getGlobalRatePerSecond()', async function () {
+      it('Gets correctly the global rate per second', async function () {
         await mineBlock(flowsDetails[0].startTimestamp + 300);
         let globalRatePerSecond = ethers.BigNumber.from(0);
 
@@ -187,7 +188,7 @@ describe.only('EssenceField', function () {
         expect(await essenceField.getGlobalRatePerSecond()).to.be.equal(globalRatePerSecond);
       });
 
-      it('getPendingRewards()', async function () {
+      it('Expects the rate per second to be equal to totalrewards/(EndTime-StartTime)', async function () {
         for (let i = 0; i < timestamps.length; i++) {
           await mineBlock(timestamps[i]);
 
@@ -204,7 +205,7 @@ describe.only('EssenceField', function () {
         }
       });
 
-      it('grantTokenToFlow()', async function () {
+      it('Increases the reward amount of flow 1, transfering the amount to the Essence Field', async function () {
         const _flow = flowsDetails[1];
         const grant = ethers.utils.parseEther('5.5');
 
@@ -233,7 +234,7 @@ describe.only('EssenceField', function () {
         expect(flowConfigAfter.ratePerSecond).to.be.equal(ethers.utils.parseEther('0.032857142857142857'));
       });
 
-      it('fundFlow()', async function () {
+      it('Funds the flow 1 with aditional grant', async function () {
         const _flow = flowsDetails[1];
         const grant = ethers.utils.parseEther('5.5');
 
@@ -260,7 +261,7 @@ describe.only('EssenceField', function () {
         expect(flowConfigAfter.ratePerSecond).to.be.equal(ethers.utils.parseEther('0.032857142857142857'));
       });
 
-      it('defundFlow()', async function () {
+      it('Defunds the flow 2', async function () {
         const _flow = flowsDetails[2];
         const defund = ethers.utils.parseEther('1250');
 
@@ -287,7 +288,7 @@ describe.only('EssenceField', function () {
         expect(flowConfigAfter.ratePerSecond).to.be.equal(ethers.utils.parseEther('0.859375'));
       });
 
-      it('updateFlowTime()', async function () {
+      it('Updates the flow time correctly', async function () {
         const newTimestamps = [
           {
             startTimestamp: flowsDetails[2].startTimestamp + 750,
@@ -380,7 +381,7 @@ describe.only('EssenceField', function () {
         expect(getPendingRewardsAfter).to.be.equal(newFlowData[2].ratePerSecond.mul(250));
       });
 
-      it('removeFlow()', async function () {
+      it('Removes a flow of Essence to an address correctly', async function () {
         const _flow = flowsDetails[2];
         const defund = ethers.utils.parseEther('1250');
 
@@ -410,7 +411,7 @@ describe.only('EssenceField', function () {
         expect(flowBalanceBefore.totalRewards).to.be.equal(flowBalanceAfter.totalRewards);
       });
 
-      it('withdrawEssence()', async function () {
+      it('Withdraws essence from the field as a deployer correctly', async function () {
         const amount = ethers.utils.parseEther('500');
 
         const essenceFieldBalanceBefore = await essenceToken.balanceOf(essenceField.address);
@@ -427,7 +428,7 @@ describe.only('EssenceField', function () {
     });
   });
 
-  describe('requestRewards()', function () {
+  describe('Requesting rewards', function () {
     let scenarios: any[] = Array.from({ length: 7 });
     let scenarioTimestamps: any[];
     let essenceTokenFresh: any;
@@ -647,7 +648,7 @@ describe.only('EssenceField', function () {
     });
 
     scenarios.forEach((testCase, i) => {
-      it(`[${i}] requestRewards()`, async function () {
+      it(`[${i}] Performs a variety of actions on different scenarios`, async function () {
         let scenario = scenarios[i];
 
         for (let index = 0; index < scenario.length; index++) {

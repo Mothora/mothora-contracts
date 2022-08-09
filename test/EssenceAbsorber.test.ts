@@ -65,13 +65,13 @@ describe.only('EssenceAbsorber', function () {
     await essenceAbsorber.setArtifactMetadataStore(mockIArtifactMetadataStore.address);
   });
 
-  it('init()', async function () {
+  it('Reverts on contract already initialized', async function () {
     await expect(essenceAbsorber.init(essenceToken.address, essenceField.address)).to.be.revertedWith(
       'Initializable: contract is already initialized'
     );
   });
 
-  it('getLockPower()', async function () {
+  it('Gets the lock power correctly', async function () {
     expect((await essenceAbsorber.getLockPower(0)).power).to.be.equal(ethers.utils.parseEther('0.1'));
     expect((await essenceAbsorber.getLockPower(1)).power).to.be.equal(ethers.utils.parseEther('0.25'));
     expect((await essenceAbsorber.getLockPower(2)).power).to.be.equal(ethers.utils.parseEther('0.8'));
@@ -79,31 +79,31 @@ describe.only('EssenceAbsorber', function () {
     expect((await essenceAbsorber.getLockPower(4)).power).to.be.equal(ethers.utils.parseEther('4'));
   });
 
-  it('setEssenceToken()', async function () {
+  it('Sets the essence token address correctly', async function () {
     expect(await essenceAbsorber.essence()).to.be.equal(essenceToken.address);
     await essenceAbsorber.setEssenceToken(deployer);
     expect(await essenceAbsorber.essence()).to.be.equal(deployer);
   });
 
-  it('setAbsorberRods()', async function () {
+  it('Sets the absorber rods address correctly', async function () {
     expect(await essenceAbsorber.absorberRods()).to.be.equal(absorberRods.address);
     await essenceAbsorber.setAbsorberRods(deployer);
     expect(await essenceAbsorber.absorberRods()).to.be.equal(deployer);
   });
 
-  it('setArtifact()', async function () {
+  it('Sets the artifact address correctly', async function () {
     expect(await essenceAbsorber.artifact()).to.be.equal(artifact.address);
     await essenceAbsorber.setArtifact(deployer);
     expect(await essenceAbsorber.artifact()).to.be.equal(deployer);
   });
 
-  it('setArtifactMetadataStore()', async function () {
+  it('Sets the mock artifact metadatastore address correctly', async function () {
     expect(await essenceAbsorber.artifactMetadataStore()).to.be.equal(mockIArtifactMetadataStore.address);
     await essenceAbsorber.setArtifactMetadataStore(deployer);
     expect(await essenceAbsorber.artifactMetadataStore()).to.be.equal(deployer);
   });
 
-  it('setArtifactPowerTable()', async function () {
+  it('Sets the artifact power table correctly', async function () {
     let artifactPowerTable = [
       // PRIMAL
       // LEGENDARY,EXOTIC,RARE,UNCOMMON,COMMON
@@ -153,7 +153,7 @@ describe.only('EssenceAbsorber', function () {
     }
   });
 
-  it('isArtifact1_1()', async function () {
+  it('Detects a Primal Legendary artifact correctly', async function () {
     const tokenId = 55;
     let metadata = {
       artifactGeneration: 0, // PRIMAL
@@ -169,7 +169,7 @@ describe.only('EssenceAbsorber', function () {
     }
   });
 
-  describe('with multiple deposits', function () {
+  describe('Multiple deposit scenarios', function () {
     let depositsScenarios: any[];
     let withdrawAllScenarios: any[];
     let harvestScenarios: any[];
@@ -285,7 +285,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('deposit()', async function () {
+    it('Verifies the performed deposits to be correct as well as total deposits and total Essence Power', async function () {
       let totalEpToken = ethers.utils.parseEther('0');
       let essenceTotalDeposits = ethers.utils.parseEther('0');
 
@@ -306,15 +306,7 @@ describe.only('EssenceAbsorber', function () {
       expect(await essenceAbsorber.totalEpToken()).to.be.equal(totalEpToken);
     });
 
-    it('essenceTotalDeposits()', async function () {
-      let essenceTotalDeposits = ethers.utils.parseEther('0');
-      for (let index = 0; index < depositsScenarios.length; index++) {
-        essenceTotalDeposits = essenceTotalDeposits.add(depositsScenarios[index].amount);
-      }
-      expect(await essenceAbsorber.essenceTotalDeposits()).to.be.equal(essenceTotalDeposits);
-    });
-
-    describe('utilization', function () {
+    describe('Tests that evaluate the utilizaton rate of the absorber', function () {
       let totalSupply: any;
       let rewards: any;
       let circulatingSupply: any;
@@ -342,7 +334,7 @@ describe.only('EssenceAbsorber', function () {
         ONE = await essenceAbsorber.ONE();
       });
 
-      it('getExcludedAddresses() && utilization() && addExcludedAddress() && removeExcludedAddress()', async function () {
+      it('getExcludedAddresses() && utilization() && addExcludedAddress() && removeExcludedAddress() correctly', async function () {
         const util = await essenceAbsorber.utilization();
         const essenceTotalDeposits = await essenceAbsorber.essenceTotalDeposits();
         expect(essenceTotalDeposits.mul(ONE).div(circulatingSupply)).to.be.equal(util);
@@ -387,7 +379,7 @@ describe.only('EssenceAbsorber', function () {
         expect(await essenceAbsorber.utilization()).to.be.equal(ethers.utils.parseEther('0.156779129562272670'));
       });
 
-      it('setUtilizationOverride()', async function () {
+      it('Overrides utilization rate of the absorber correctly', async function () {
         for (let index = 0; index < utilizationOverride.length; index++) {
           const utilization = utilizationOverride[index][0];
           await essenceAbsorber.setUtilizationOverride(utilization);
@@ -403,7 +395,7 @@ describe.only('EssenceAbsorber', function () {
         }
       });
 
-      it('getRealEssenceReward()', async function () {
+      it('Gets the real essence rewards correctly', async function () {
         const rewardsAmount = ethers.utils.parseEther('1');
 
         for (let index = 0; index < utilizationOverride.length; index++) {
@@ -420,7 +412,7 @@ describe.only('EssenceAbsorber', function () {
       });
     });
 
-    it('withdrawPosition()', async function () {
+    it('Withdraws all positions from depositScenarios correctly', async function () {
       for (let index = 0; index < depositsScenarios.length; index++) {
         const deposit = depositsScenarios[index];
 
@@ -440,6 +432,7 @@ describe.only('EssenceAbsorber', function () {
           balAfter = await essenceToken.balanceOf(deposit.address);
           expect(balAfter.sub(balBefore)).to.be.equal(0);
 
+          // assert the vested principal to be 0 in the begining
           expect(
             await essenceAbsorber.connect(deposit.signer).calcualteVestedPrincipal(deposit.address, deposit.depositId)
           ).to.be.equal(0);
@@ -453,14 +446,19 @@ describe.only('EssenceAbsorber', function () {
           let principalVested = await essenceAbsorber
             .connect(deposit.signer)
             .calcualteVestedPrincipal(deposit.address, deposit.depositId);
+
+          // verifies the principal vested to be half the deposit amount at half past the start of the vesting period
           expect(principalVested).to.be.equal(deposit.amount.div(2));
 
           await mineBlock(vestingEnd);
           principalVested = await essenceAbsorber
             .connect(deposit.signer)
             .calcualteVestedPrincipal(deposit.address, deposit.depositId);
+
+          // verifies everything to be vested at the end
           expect(principalVested).to.be.equal(deposit.amount);
 
+          // withdraws the position
           await essenceAbsorber.connect(deposit.signer).withdrawPosition(deposit.depositId, deposit.amount);
 
           balAfter = await essenceToken.balanceOf(deposit.address);
@@ -474,7 +472,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('withdrawAll()', async function () {
+    it('Withdraws using withdraw all correctly', async function () {
       for (let index = 0; index < withdrawAllScenarios.length; index++) {
         const staker = withdrawAllScenarios[index];
 
@@ -487,6 +485,7 @@ describe.only('EssenceAbsorber', function () {
         await essenceAbsorber.connect(staker.signer).withdrawAll();
 
         balAfter = await essenceToken.balanceOf(staker.address);
+        // expect the balance to be the same as nothing could be withdrawn
         expect(balAfter).to.be.equal(staker.prevBal);
 
         const vestingTime = (await essenceAbsorber.getVestingTime(staker.lock)).toNumber();
@@ -501,7 +500,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('harvestPosition()', async function () {
+    it('Harvests user position correctly', async function () {
       await mineBlock(startTimestamp + 6000);
 
       for (let index = 0; index < harvestScenarios.length; index++) {
@@ -519,7 +518,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('harvestAll()', async function () {
+    it('Harvests all positions correctly ', async function () {
       for (let index = 0; index < depositsScenarios.length; index++) {
         expect(await essenceToken.balanceOf(depositsScenarios[index].address)).to.be.equal(0);
       }
@@ -568,7 +567,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('withdrawAndHarvestPosition()', async function () {
+    it('Withdraws and harvests a single deposit position correctly', async function () {
       for (let index = 0; index < depositsScenarios.length; index++) {
         const deposit = depositsScenarios[index];
         const reward = harvestScenarios[index];
@@ -587,7 +586,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('withdrawAndHarvestAll()', async function () {
+    it('Withdraws and harvest all deposit positions correctly', async function () {
       for (let index = 0; index < depositsScenarios.length; index++) {
         expect(await essenceToken.balanceOf(depositsScenarios[index].address)).to.be.equal(0);
       }
@@ -633,7 +632,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('toggleUnlockAll()', async function () {
+    it('Toggles the unlock of all positions correctly', async function () {
       await expect(essenceAbsorber.connect(hackerSigner).toggleUnlockAll()).to.be.reverted;
 
       for (let index = 0; index < withdrawAllScenarios.length; index++) {
@@ -651,7 +650,7 @@ describe.only('EssenceAbsorber', function () {
       }
     });
 
-    it('withdrawUndistributedRewards()', async function () {
+    it('Withdraws undistributed rewards correctly', async function () {
       await essenceAbsorber.setUtilizationOverride(ethers.utils.parseEther('0.4'));
 
       const deposit = depositsScenarios[3];
@@ -673,8 +672,6 @@ describe.only('EssenceAbsorber', function () {
       expect(await essenceAbsorber.totalUndistributedRewards()).to.be.equal(0);
     });
 
-    it('calcualteVestedPrincipal()');
-
     describe('NFT staking', function () {
       let powerScenarios: any[];
       let metadata: any;
@@ -689,7 +686,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 0,
             },
-            power: ethers.utils.parseEther('0.008'),
+            power: ethers.utils.parseEther('0.01'),
           },
           {
             nft: absorberRods.address,
@@ -699,17 +696,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 0,
               artifactRarity: 0,
             },
-            power: ethers.utils.parseEther('0.067'),
-          },
-          {
-            nft: absorberRods.address,
-            tokenId: 47,
-            amount: 5,
-            metadata: {
-              artifactGeneration: 0,
-              artifactRarity: 0,
-            },
-            power: ethers.utils.parseEther('0.073'),
+            power: ethers.utils.parseEther('0.01'),
           },
           {
             nft: artifact.address,
@@ -749,7 +736,7 @@ describe.only('EssenceAbsorber', function () {
               artifactGeneration: 1,
               artifactRarity: 2,
             },
-            power: ethers.utils.parseEther('0'),
+            power: ethers.utils.parseEther('0.15'),
           },
           {
             nft: artifact.address,
@@ -778,26 +765,28 @@ describe.only('EssenceAbsorber', function () {
         }
       });
 
-      it('getNftPower()', async function () {
+      it('Gets NFT power correctly', async function () {
         for (let index = 0; index < powerScenarios.length; index++) {
           const scenario = powerScenarios[index];
+
           expect(await essenceAbsorber.getNftPower(scenario.nft, scenario.tokenId, scenario.amount)).to.be.equal(
             scenario.power.mul(scenario.amount)
           );
         }
       });
 
-      describe('stakeAbsorberRods()', function () {
-        it('Cannot stake AbsorberRods', async function () {
+      describe('Staking of Absorber rods', function () {
+        it('Reverts on address 0 for absorber rods', async function () {
           await essenceAbsorber.setAbsorberRods(ethers.constants.AddressZero);
           await expect(essenceAbsorber.stakeAbsorberRods(1, 1)).to.be.revertedWith('Cannot stake AbsorberRods');
         });
 
-        it('Amount is 0', async function () {
+        it('Reverts on staking 0 absorber rods', async function () {
+          // don't we need to reset setAbsorberRods here?
           await expect(essenceAbsorber.stakeAbsorberRods(1, 0)).to.be.revertedWith('Amount is 0');
         });
 
-        it('Max 20 absorberRods per wallet', async function () {
+        it('Reverts on trying to stake more than 20 absorber rods per wallet', async function () {
           for (let index = 0; index < 5; index++) {
             await absorberRods.functions['mint(address,uint256,uint256)'](staker1, index, 5);
             await absorberRods.connect(staker1Signer).setApprovalForAll(essenceAbsorber.address, true);
@@ -812,7 +801,7 @@ describe.only('EssenceAbsorber', function () {
           }
         });
 
-        it('staking power', async function () {
+        it('Calculates the powers of the staked absorber rods correctly ', async function () {
           let totalPower = ethers.utils.parseEther('0');
 
           for (let index = 0; index < powerScenarios.length; index++) {
@@ -845,13 +834,13 @@ describe.only('EssenceAbsorber', function () {
         });
       });
 
-      describe('stakeArtifact()', function () {
-        it('Cannot stake Artifact', async function () {
+      describe('Staking of artifacts', function () {
+        it('Reverts on staking an artifact with address 0', async function () {
           await essenceAbsorber.setArtifact(ethers.constants.AddressZero);
           await expect(essenceAbsorber.stakeArtifact(1)).to.be.revertedWith('Cannot stake Artifact');
         });
 
-        it('NFT already staked', async function () {
+        it('Reverts on trying to stake the same artifact again', async function () {
           let metadata = {
             artifactGeneration: 0,
             artifactRarity: 0,
@@ -866,7 +855,7 @@ describe.only('EssenceAbsorber', function () {
           );
         });
 
-        it('Max 3 artifacts per wallet', async function () {
+        it('Reverts on trying to stake more than 3 artifacts per wallet', async function () {
           let metadata = {
             artifactGeneration: 1,
             artifactRarity: 0,
@@ -885,7 +874,7 @@ describe.only('EssenceAbsorber', function () {
           }
         });
 
-        it('Max 1 1/1 artifact per wallet', async function () {
+        it('Reverts on trying to stake more than one Primal Legenday artifact', async function () {
           let metadata = {
             artifactGeneration: 0,
             artifactRarity: 0,
@@ -903,7 +892,7 @@ describe.only('EssenceAbsorber', function () {
           );
         });
 
-        it('stake powers', async function () {
+        it('Calculates the staking powers of the artifacts correctly', async function () {
           let totalPower = ethers.utils.parseEther('0');
 
           for (let index = 0; index < powerScenarios.length; index++) {
@@ -927,7 +916,7 @@ describe.only('EssenceAbsorber', function () {
         });
       });
 
-      it('harvest scenarios with staking', async function () {
+      it('Calculates harvest scenarios with staking correctly', async function () {
         for (let index = 0; index < depositsScenarios.length; index++) {
           expect(await essenceToken.balanceOf(depositsScenarios[index].address)).to.be.equal(0);
         }
@@ -940,19 +929,19 @@ describe.only('EssenceAbsorber', function () {
                 address: staker1,
                 signer: staker1Signer,
                 depositId: 1,
-                index: 7,
+                index: 6, // artifact
               },
               {
                 address: staker1,
                 signer: staker1Signer,
                 depositId: 3,
-                index: 5,
+                index: 5, // artifact
               },
               {
                 address: staker2,
                 signer: staker2Signer,
                 depositId: 1,
-                index: 3,
+                index: 3, // artifact
               },
             ],
             unstake: [],
@@ -964,13 +953,13 @@ describe.only('EssenceAbsorber', function () {
                 address: staker1,
                 signer: staker1Signer,
                 depositId: 1,
-                index: 2,
+                index: 1, // absorber rod
               },
               {
                 address: staker1,
                 signer: staker1Signer,
                 depositId: 2,
-                index: 4,
+                index: 4, // artifact
               },
             ],
             unstake: [],
@@ -983,7 +972,7 @@ describe.only('EssenceAbsorber', function () {
                 address: staker1,
                 signer: staker1Signer,
                 depositId: 1,
-                index: 2,
+                index: 1,
               },
             ],
           },
@@ -1000,7 +989,6 @@ describe.only('EssenceAbsorber', function () {
             ],
           },
         ];
-
         for (let index = 0; index < steps.length; index++) {
           const step = steps[index];
 
@@ -1040,16 +1028,17 @@ describe.only('EssenceAbsorber', function () {
 
         await mineBlock(startTimestamp + 6000);
 
+        // TODO - transform reward calculation into accurate numbers
         const rewards = [
           {
-            address: depositsScenarios[0].address,
-            signer: depositsScenarios[0].signer,
-            reward: ethers.utils.parseEther('707.994049297877092636'),
+            address: staker1,
+            signer: staker1Signer,
+            reward: ethers.utils.parseEther('689.620538558700931483'),
           },
           {
-            address: depositsScenarios[3].address,
-            signer: depositsScenarios[3].signer,
-            reward: ethers.utils.parseEther('192.005950702122902940'),
+            address: staker2,
+            signer: staker2Signer,
+            reward: ethers.utils.parseEther('210.379461441299066420'),
           },
         ];
 
@@ -1117,8 +1106,9 @@ describe.only('EssenceAbsorber', function () {
         });
       });
 
-      describe('with NFTs staked', function () {
+      describe('Tests with NFTs staked', function () {
         beforeEach(async function () {
+          // disregard unstake scenarios in loop
           for (let index = 0; index < powerScenarios.slice(0, -2).length; index++) {
             const scenario = powerScenarios[index];
 
@@ -1138,7 +1128,7 @@ describe.only('EssenceAbsorber', function () {
           }
         });
 
-        it('Withdraw amount too big', async function () {
+        it('Reverts if amount staker has is lower than amount being requested to withdraw', async function () {
           const scenario = powerScenarios[0];
           await expect(
             essenceAbsorber.connect(staker2Signer).unstakeAbsorberRods(scenario.tokenId, scenario.amount)
@@ -1146,16 +1136,14 @@ describe.only('EssenceAbsorber', function () {
           expect(await absorberRods.balanceOf(essenceAbsorber.address, scenario.tokenId)).to.be.equal(scenario.amount);
         });
 
-        it('NFT is not staked', async function () {
-          const scenario = powerScenarios[7];
+        it('Reverts if selected NFT is not staked by the connected staker', async function () {
+          const scenario = powerScenarios[6];
           await expect(essenceAbsorber.connect(staker2Signer).unstakeArtifact(scenario.tokenId)).to.be.revertedWith(
             'NFT is not staked'
           );
         });
 
-        it('unstake powers', async function () {
-          let totalPower = await essenceAbsorber.powers(staker1);
-
+        it('Calculates correctly the staking power', async function () {
           for (let index = 0; index < powerScenarios.slice(0, -2).length; index++) {
             const scenario = powerScenarios[index];
             const powerBefore = await essenceAbsorber.powers(staker1);
