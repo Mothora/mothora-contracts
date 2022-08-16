@@ -31,7 +31,7 @@ describe.only('EssenceAbsorber', function () {
   });
 
   beforeEach(async function () {
-    await deployments.fixture(['EssenceAbsorber'], { fallbackToGlobal: true });
+    await deployments.fixture(['EssenceAbsorberV2'], { fallbackToGlobal: true });
 
     // This mints a ERC20 Essence test token here
     const ERC20Mintable = await ethers.getContractFactory('ERC20Mintable');
@@ -57,7 +57,7 @@ describe.only('EssenceAbsorber', function () {
       ).abi
     );
 
-    const EssenceAbsorber = await deployments.get('EssenceAbsorber');
+    const EssenceAbsorber = await deployments.get('EssenceAbsorberV2');
     essenceAbsorber = new ethers.Contract(EssenceAbsorber.address, EssenceAbsorber.abi, deployerSigner);
     await essenceAbsorber.setEssenceToken(essenceToken.address);
     await essenceAbsorber.setAbsorberRods(absorberRods.address);
