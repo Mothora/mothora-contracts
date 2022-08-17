@@ -259,22 +259,22 @@ describe.only('MockInteractions', async () => {
 
   describe('Contribute Vault Parts', async () => {
     it('It reverts if amount <0', async () => {
-      await expect(essenceAbsorber.connect(deployerSigner).contributeVaultParts(0)).to.be.revertedWith(
+      await expect(essenceAbsorber.connect(deployerSigner).contributeArtifacts(0)).to.be.revertedWith(
         'Amount must be more than 0'
       );
-      await expect(essenceAbsorber.connect(deployerSigner).contributeVaultParts(-1)).to.be.reverted;
+      await expect(essenceAbsorber.connect(deployerSigner).contributeArtifacts(-1)).to.be.reverted;
     });
 
     it('It reverts if the amount is higher than players VP Balance', async () => {
       expect(await gameitems.connect(deployerSigner).balanceOf(deployer, 0)).to.be.least(0);
-      await expect(essenceAbsorber.connect(deployerSigner).contributeVaultParts(6)).to.be.revertedWith(
+      await expect(essenceAbsorber.connect(deployerSigner).contributeArtifacts(6)).to.be.revertedWith(
         'The Player does not have enough Vault Parts'
       );
     });
 
     it('It successfully contributes essenceAbsorber parts', async () => {
       await gameitems.connect(deployerSigner).setApprovalForAll(essenceAbsorber.address, true);
-      await essenceAbsorber.connect(deployerSigner).contributeVaultParts(1);
+      await essenceAbsorber.connect(deployerSigner).contributeArtifacts(1);
       expect(await essenceAbsorber.connect(deployerSigner).playerStakedPartsBalance(deployer)).to.be.equal(1);
       expect(await essenceAbsorber.connect(deployerSigner).factionPartsBalance(2)).to.be.equal(1);
     });
@@ -313,7 +313,7 @@ describe.only('MockInteractions', async () => {
       await player.connect(tester5Signer).mockClaimQuestRewards(6);
       await player.connect(tester5Signer).MockRandomnessFulfilment(6, [132]);
       await gameitems.connect(tester5Signer).setApprovalForAll(essenceAbsorber.address, true);
-      await essenceAbsorber.connect(tester5Signer).contributeVaultParts(await gameitems.balanceOf(tester5, 0));
+      await essenceAbsorber.connect(tester5Signer).contributeArtifacts(await gameitems.balanceOf(tester5, 0));
 
       await player.connect(tester7Signer).joinFaction(2);
       await player.connect(tester7Signer).mintCharacter();
@@ -326,7 +326,7 @@ describe.only('MockInteractions', async () => {
       await player.connect(tester7Signer).mockClaimQuestRewards(8);
       await player.connect(tester7Signer).MockRandomnessFulfilment(8, [444]);
       await gameitems.connect(tester7Signer).setApprovalForAll(essenceAbsorber.address, true);
-      await essenceAbsorber.connect(tester7Signer).contributeVaultParts(await gameitems.balanceOf(tester7, 0));
+      await essenceAbsorber.connect(tester7Signer).contributeArtifacts(await gameitems.balanceOf(tester7, 0));
 
       await player.connect(tester8Signer).joinFaction(2);
       await player.connect(tester8Signer).mintCharacter();
@@ -339,7 +339,7 @@ describe.only('MockInteractions', async () => {
       await player.connect(tester8Signer).mockClaimQuestRewards(10);
       await player.connect(tester8Signer).MockRandomnessFulfilment(10, [55]);
       await gameitems.connect(tester8Signer).setApprovalForAll(essenceAbsorber.address, true);
-      await essenceAbsorber.connect(tester8Signer).contributeVaultParts(await gameitems.balanceOf(tester8, 0));
+      await essenceAbsorber.connect(tester8Signer).contributeArtifacts(await gameitems.balanceOf(tester8, 0));
 
       await player.connect(tester9Signer).joinFaction(2);
       await player.connect(tester9Signer).mintCharacter();
@@ -364,7 +364,7 @@ describe.only('MockInteractions', async () => {
       await player.connect(tester9Signer).mockClaimQuestRewards(15);
       await player.connect(tester9Signer).MockRandomnessFulfilment(15, [753]);
       await gameitems.connect(tester9Signer).setApprovalForAll(essenceAbsorber.address, true);
-      await essenceAbsorber.connect(tester9Signer).contributeVaultParts(await gameitems.balanceOf(tester9, 0));
+      await essenceAbsorber.connect(tester9Signer).contributeArtifacts(await gameitems.balanceOf(tester9, 0));
 
       // Staking and distributing
 

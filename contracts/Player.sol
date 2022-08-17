@@ -157,15 +157,15 @@ contract Player is VRFConsumerBaseV2, Ownable {
         players[player].characterFullofRewards = false;
 
         if (random >= 800) {
-            gameItemsContract.mintVaultParts(player, 5);
+            gameItemsContract.mintArtifacts(player, 5);
         } else if (random < 800 && random >= 600) {
-            gameItemsContract.mintVaultParts(player, 4);
+            gameItemsContract.mintArtifacts(player, 4);
         } else if (random < 600 && random >= 400) {
-            gameItemsContract.mintVaultParts(player, 3);
+            gameItemsContract.mintArtifacts(player, 3);
         } else if (random < 400 && random >= 200) {
-            gameItemsContract.mintVaultParts(player, 2);
+            gameItemsContract.mintArtifacts(player, 2);
         } else if (random < 200) {
-            gameItemsContract.mintVaultParts(player, 1);
+            gameItemsContract.mintArtifacts(player, 1);
         }
     }
 

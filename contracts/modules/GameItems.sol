@@ -10,8 +10,8 @@ contract GameItems is ERC1155, Ownable {
 
     mapping(uint256 => string) private _uris;
 
-    uint256 public constant VAULTPARTS = 0;
-    uint256 public constant VAHNU = 1;
+    uint256 public constant ARTIFACTS = 0;
+    uint256 public constant THOROKS = 1;
     uint256 public constant CONGLOMERATE = 2;
     uint256 public constant DOC = 3;
 
@@ -25,8 +25,8 @@ contract GameItems is ERC1155, Ownable {
     constructor(string memory _initialFolder, address _mothoraGameAddress)
         ERC1155(string(abi.encodePacked(_initialFolder, "{id}.json")))
     {
-        setTokenUri(VAULTPARTS, string(abi.encodePacked(_initialFolder, "0", ".json")));
-        setTokenUri(VAHNU, string(abi.encodePacked(_initialFolder, "1", ".json")));
+        setTokenUri(ARTIFACTS, string(abi.encodePacked(_initialFolder, "0", ".json")));
+        setTokenUri(THOROKS, string(abi.encodePacked(_initialFolder, "1", ".json")));
         setTokenUri(CONGLOMERATE, string(abi.encodePacked(_initialFolder, "2", ".json")));
         setTokenUri(DOC, string(abi.encodePacked(_initialFolder, "3", ".json")));
         mothoraGameAddress = _mothoraGameAddress;
@@ -38,12 +38,12 @@ contract GameItems is ERC1155, Ownable {
     }
 
     function mintCharacter(address _recipient, uint256 _id) external onlyMothoraGame {
-        require(_id != VAULTPARTS, "The Player cannot mint VaultParts on MintCharacter function.");
+        require(_id == THOROKS || _id == CONGLOMERATE || _id == DOC, "ONLY_CHARACTERS_ALLOWED");
         _mint(_recipient, _id, 1, "");
     }
 
-    function mintVaultParts(address recipient, uint256 amount) external onlyMothoraGame {
-        _mint(recipient, VAULTPARTS, amount, "");
+    function mintArtifacts(address recipient, uint256 amount) external onlyMothoraGame {
+        _mint(recipient, ARTIFACTS, amount, "");
     }
 
     function uri(uint256 tokenId) public view override returns (string memory) {
@@ -51,7 +51,7 @@ contract GameItems is ERC1155, Ownable {
     }
 
     function setTokenUri(uint256 tokenId, string memory NFTuri) public onlyOwner {
-        require(bytes(_uris[tokenId]).length == 0, "Cannot set uri twice.");
+        require(bytes(_uris[tokenId]).length == 0, "CANNOT_SET_URI_TWICE");
         _uris[tokenId] = NFTuri;
     }
 

@@ -78,12 +78,12 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         totalStakedBalance -= _amount;
     }
 
-    function contributeVaultParts(uint256 _amount) external nonReentrant activeAccounts {
+    function contributeArtifacts(uint256 _amount) external nonReentrant activeAccounts {
         require(_amount > 0, "Amount must be more than 0");
         GameItems gameItemsContract = GameItems(mothoraGameContract.getGameItems());
         require(
-            gameItemsContract.balanceOf(msg.sender, gameItemsContract.VAULTPARTS()) >= _amount,
-            "The Player does not have enough Vault Parts"
+            gameItemsContract.balanceOf(msg.sender, gameItemsContract.ARTIFACTS()) >= _amount,
+            "The Player does not have enough Artifacts"
         );
 
         playerStakedPartsBalance[msg.sender] += _amount;

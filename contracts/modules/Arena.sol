@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
@@ -33,7 +32,6 @@ contract Arena is VRFConsumerBaseV2, Ownable {
     struct ArenaData {
         Status status;
         address[] players;
-        address creator;
     }
 
     // arena session id to arena data
@@ -71,7 +69,7 @@ contract Arena is VRFConsumerBaseV2, Ownable {
     // The default is 3, but you can set this higher.
     uint16 requestConfirmations = 3;
 
-    mapping(uint256 => uint256) randomIdToArena;
+    mapping(uint256 => address) randomIdToTerminator;
 
     modifier activeAccounts() {
         uint256 id = mothoraGameContract.getPlayerId(msg.sender);
@@ -120,24 +118,28 @@ contract Arena is VRFConsumerBaseV2, Ownable {
             arenaSessionData[arenaId].players.push(player);
             playerInSession[player] = arenaId;
         }
+        require(playerInSession[msg.sender] == arenaId, "CREATOR_NOT_IN_SESSION");
 
         for (uint256 i = 1; i <= 3; i = unsafeInc(i)) {
             require(factionMembers[i] > 0, "NOT_ENOUGH_FACTION_MEMBERS");
         }
 
         arenaSessionData[arenaId].status = Status.INGAME;
-        arenaSessionData[arenaId].creator = msg.sender;
 
         emit ArenaSessionCreated(arenaId, msg.sender);
     }
 
     /**
-     * @dev Finishes sessions that can be "ended"
+     * @dev Finishes sessions that can be "terminated"
      * @dev This function could fetch off-chain information such as winning players through a chainlink adapter
-     * @dev It will only determine winners randomly and give a guaranteed reward to the callee of this function
+     * @dev For the current purpose will only determine rewards randomly and give a guaranteed extra reward to the callee of this function
      * @param arenaId The id of the arena
      **/
-    function endArenaSession(uint256 arenaId) external {
+    function terminateArenaSession(uint256 arenaId) external {
+        require(playerInSession[msg.sender] == arenaId, "TERMINATOR_NOT_IN_SESSION");
+        require(arenaSessionData[arenaId].status == Status.INGAME, "SESSION_NOT_INGAME");
+        arenaSessionData[arenaId].status = Status.POSTGAME;
+
         uint256 playerNumber = arenaSessionData[arenaId].players.length;
 
         // TODO check for suficient link tokens
@@ -148,43 +150,53 @@ contract Arena is VRFConsumerBaseV2, Ownable {
             callbackGasLimit,
             uint32(playerNumber)
         );
-        randomIdToArena[s_requestId] = arenaId;
-        arenaSessionData[arenaId].status = Status.POSTGAME;
+        randomIdToTerminator[s_requestId] = msg.sender;
         emit ArenaSessionPostgame(arenaId);
     }
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal virtual override {
-        uint256 arenaId = randomIdToArena[requestId];
+        address terminator = randomIdToTerminator[requestId];
 
-        // we would need to request a number of random words equal to the number of players in this case
+        uint256 arenaId = playerInSession[terminator];
+
+        require(arenaId != 0, "SESSION_MUST_EXIST");
+        require(arenaSessionData[arenaId].status == Status.INGAME, "SESSION_ALREADY_REWARDED");
+
+        arenaSessionData[arenaId].status = Status.REWARDED;
 
         uint256 playerNumber = arenaSessionData[arenaId].players.length;
-
+        uint256 artifactsToMint;
+        uint256 random;
         address player;
-
         GameItems gameItemsContract = GameItems(mothoraGameContract.getGameItems());
 
-        //gameItemsContract.mintVaultParts(arenaSessionData[arenaId].creator, 5);
-
         for (uint256 i = 1; i <= playerNumber; i = unsafeInc(i)) {
+            artifactsToMint = 0;
             player = arenaSessionData[arenaId].players[i];
+            random = (randomWords[i] % 1000) + 1;
 
-            uint256 random = (randomWords[i] % 1000) + 1;
-
-            if (random >= 800) {
-                gameItemsContract.mintVaultParts(player, 5);
-            } else if (random < 800 && random >= 600) {
-                gameItemsContract.mintVaultParts(player, 4);
-            } else if (random < 600 && random >= 400) {
-                gameItemsContract.mintVaultParts(player, 3);
-            } else if (random < 400 && random >= 200) {
-                gameItemsContract.mintVaultParts(player, 2);
-            } else if (random < 200) {
-                gameItemsContract.mintVaultParts(player, 1);
+            if (player == terminator) {
+                // give an extra artifact to the game terminator as an incentive
+                artifactsToMint = 1;
             }
+            if (random >= 800) {
+                artifactsToMint += 4;
+                gameItemsContract.mintArtifacts(player, artifactsToMint);
+            } else if (random < 800 && random >= 600) {
+                artifactsToMint += 3;
+                gameItemsContract.mintArtifacts(player, artifactsToMint);
+            } else if (random < 600 && random >= 400) {
+                artifactsToMint += 2;
+                gameItemsContract.mintArtifacts(player, artifactsToMint);
+            } else if (random < 400 && random >= 200) {
+                artifactsToMint += 1;
+                gameItemsContract.mintArtifacts(player, artifactsToMint);
+            } else if (random < 200) {
+                gameItemsContract.mintArtifacts(player, artifactsToMint);
+            }
+            // reset session for player to be able to join a new game
             playerInSession[player] = 0;
         }
-        arenaSessionData[arenaId].status = Status.REWARDED;
 
         emit ArenaSessionRewarded(arenaId);
     }

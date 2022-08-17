@@ -242,4 +242,24 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
         );
         GameItems(getGameItems()).mintCharacter(msg.sender, faction);
     }
+
+    /*
+        function defect(uint256 _newFaction) external {
+        require(_newFaction == 1 || _newFaction == 2 || _newFaction == 3, "Please select a valid faction.");
+        uint256 currentfaction = getFaction(msg.sender);
+        totalFactionMembers[currentfaction] -= 1;
+        if (_newFaction == 1 && players[msg.sender].faction != Faction.VAHNU) {
+            players[msg.sender].faction = Faction.VAHNU;
+            totalFactionMembers[1] += 1;
+        } else if (_newFaction == 2 && players[msg.sender].faction != Faction.CONGLOMERATE) {
+            players[msg.sender].faction = Faction.CONGLOMERATE;
+            totalFactionMembers[2] += 1;
+        } else if (_newFaction == 3 && players[msg.sender].faction != Faction.DOC) {
+            players[msg.sender].faction = Faction.DOC;
+            totalFactionMembers[3] += 1;
+        }
+        // TODO burn all vault part NFTs this wallet has on it.
+        // Joao: instead of burning they could be given away to their current faction
+    }
+    */
 }
