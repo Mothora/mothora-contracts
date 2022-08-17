@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { ethers } from 'hardhat';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -9,15 +10,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('EssenceAbsorber', {
     from: deployer,
     log: true,
-    args: [
-      (await deployments.get('Essence')).address,
-      (await deployments.get('GameItems')).address,
-      (await deployments.get('MockPlayer')).address,
-      15,
-      600,
-    ],
+    args: [(await deployments.get('MothoraGame')).address, 15, 600],
   });
+  if ((await read('MothoraGame', 'getEssenceAbsorber')) === ethers.constants.AddressZero) {
+    await execute(
+      'MothoraGame',
+      { from: deployer, log: true },
+      'setEssenceAbsorber',
+      (
+        await deployments.get('EssenceAbsorber')
+      ).address
+    );
+  }
 };
 export default func;
 func.tags = ['EssenceAbsorber'];
-func.dependencies = ['Essence', 'GameItems', 'MockPlayer'];
+func.dependencies = ['MothoraGame'];

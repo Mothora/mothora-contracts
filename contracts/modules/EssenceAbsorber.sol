@@ -53,22 +53,23 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         epochStartTime = block.timestamp;
     }
 
-    modifier accountActive() {
-        (uint256 id, , , , bool frozen, ) = mothoraGameContract.getAccount(msg.sender);
+    modifier activeAccounts() {
+        uint256 id = mothoraGameContract.getPlayerId(msg.sender);
+        bool frozen = mothoraGameContract.getPlayerStatus(msg.sender);
         require(id != 0 && !frozen, "ACCOUNT_NOT_ACTIVE");
         _;
     }
 
     //============== FUNCTIONS =============
 
-    function stakeTokens(uint256 _amount) public nonReentrant accountActive {
+    function stakeTokens(uint256 _amount) public nonReentrant activeAccounts {
         require(_amount > 0, "Amount must be more than 0.");
         IERC20(mothoraGameContract.getEssence()).safeTransferFrom(msg.sender, address(this), _amount);
 
         _stakeTokens(_amount);
     }
 
-    function unstakeTokens(uint256 _amount) external nonReentrant accountActive {
+    function unstakeTokens(uint256 _amount) external nonReentrant activeAccounts {
         require(_amount > 0, "Amount must be more than 0.");
         require(stakedESSBalance[msg.sender] > 0, "Staking balance cannot be 0");
         require(_amount <= stakedESSBalance[msg.sender], "Cannot unstake more than your staked balance");
@@ -77,7 +78,7 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         totalStakedBalance -= _amount;
     }
 
-    function contributeVaultParts(uint256 _amount) external nonReentrant accountActive {
+    function contributeVaultParts(uint256 _amount) external nonReentrant activeAccounts {
         require(_amount > 0, "Amount must be more than 0");
         GameItems gameItemsContract = GameItems(mothoraGameContract.getGameItems());
         require(
@@ -86,7 +87,7 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         );
 
         playerStakedPartsBalance[msg.sender] += _amount;
-        (, uint256 faction, , , , ) = mothoraGameContract.getAccount(msg.sender);
+        uint256 faction = mothoraGameContract.getPlayerFaction(msg.sender);
 
         factionPartsBalance[faction] += _amount;
         totalVaultPartsContributed += _amount;
@@ -134,11 +135,12 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
             factionPartsBalance[3];
 
         if (maxedFactor2 != 0) {
+            uint256 faction;
             // Distributes the rewards
             for (uint256 i = 1; i <= playerId; i = unsafeInc(i)) {
                 factor1 = (stakedESSBalance[playerAddresses[i - 1]] * _calculateTimeTier(_playerAddresses[i - 1]));
                 factor2 = playerStakedPartsBalance[_playerAddresses[i - 1]];
-                (, uint256 faction, , , , ) = mothoraGameContract.getAccount(_playerAddresses[i - 1]);
+                faction = mothoraGameContract.getPlayerFaction(_playerAddresses[i - 1]);
 
                 factor3 = factionPartsBalance[faction];
 
@@ -158,7 +160,7 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         lastDistributionTime = block.timestamp;
     }
 
-    function claimEpochRewards(bool autocompound) external accountActive {
+    function claimEpochRewards(bool autocompound) external activeAccounts {
         uint256 transferValue = RewardsBalance[msg.sender];
         RewardsBalance[msg.sender] = 0;
 

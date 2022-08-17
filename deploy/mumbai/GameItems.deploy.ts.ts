@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { ethers } from 'hardhat';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -11,9 +12,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('GameItems', {
     from: deployer,
     log: true,
-    args: [ipfs, (await deployments.get('MockPlayer')).address],
+    args: [ipfs, (await deployments.get('MothoraGame')).address],
   });
+
+  if ((await read('MothoraGame', 'getGameItems')) === ethers.constants.AddressZero) {
+    await execute(
+      'MothoraGame',
+      { from: deployer, log: true },
+      'setGameItems',
+      (
+        await deployments.get('GameItems')
+      ).address
+    );
+  }
 };
 export default func;
 func.tags = ['GameItems'];
-func.dependencies = ['MockPlayer'];
+func.dependencies = ['MothoraGame'];

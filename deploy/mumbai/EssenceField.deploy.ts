@@ -1,13 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { ethers } from 'hardhat';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy, execute, read } = deployments;
   const { deployer } = await getNamedAccounts();
-
-  // Requires a new deployment of Essence
-  const essenceMumbai = '0xA0A89db1C899c49F98E6326b764BAFcf167fC2CE';
 
   // this address could be the multi-sig address that will own the Essencefield
   const newOwner = '0x3D210e741cDeDeA81efCd9711Ce7ef7FEe45684B';
@@ -19,7 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       execute: {
         init: {
           methodName: 'init',
-          args: [essenceMumbai],
+          args: [(await deployments.get('Essence')).address],
         },
       },
     },
@@ -30,6 +28,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   if (!(await read('EssenceField', 'hasRole', ESSENCE_FIELD_CREATOR_ROLE, newOwner))) {
     await execute('EssenceField', { from: deployer, log: true }, 'grantRole', ESSENCE_FIELD_CREATOR_ROLE, newOwner);
   }
+
+  if ((await read('MothoraGame', 'getEssenceField')) === ethers.constants.AddressZero) {
+    await execute(
+      'MothoraGame',
+      { from: deployer, log: true },
+      'setEssenceField',
+      (
+        await deployments.get('EssenceField')
+      ).address
+    );
+  }
 };
 export default func;
 func.tags = ['EssenceField'];
+func.dependencies = ['Essence', 'MothoraGame'];

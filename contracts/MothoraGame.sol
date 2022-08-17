@@ -20,17 +20,16 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     uint256[4] public totalFactionMembers;
 
     struct Account {
-        uint256 timelock;
         uint256 id;
         bool frozen;
-        bool characterFullofRewards;
         Faction faction;
     }
     bytes32 public constant MOTHORA_GAME_MASTER = keccak256("MOTHORA_GAME_MASTER");
 
-    // address => Account
+    // Player address => Struct Account
     mapping(address => Account) private playerAccounts;
 
+    // Bytes32 id => contract Address
     mapping(bytes32 => address) private gameProtocolAddresses;
 
     bytes32 private constant ARENA_MODULE = "ARENA_MODULE";
@@ -86,31 +85,27 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
-     * @dev Returns a player's account
-     * @return Returns an account's data ID/FACTION/TIMELOCK/ARENAISLOCKED/FROZEN/HASREWARDS
+     * @dev Returns a player's id
+     * @return Players'id
      */
-    function getAccount(address player)
-        public
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            bool,
-            bool,
-            bool
-        )
-    {
-        bool arenaIsLocked = playerAccounts[player].timelock > block.timestamp ? true : false;
+    function getPlayerId(address player) public view returns (uint256) {
+        return (playerAccounts[player].id);
+    }
 
-        return (
-            playerAccounts[player].id,
-            uint256(playerAccounts[player].faction),
-            playerAccounts[player].timelock,
-            arenaIsLocked,
-            playerAccounts[player].frozen,
-            playerAccounts[player].characterFullofRewards
-        );
+    /**
+     * @dev Returns a player's faction
+     * @return Faction code
+     */
+    function getPlayerFaction(address player) public view returns (uint256) {
+        return (uint256(playerAccounts[player].faction));
+    }
+
+    /**
+     * @dev Returns a player's status
+     * @return Frozen status
+     */
+    function getPlayerStatus(address player) public view returns (bool) {
+        return playerAccounts[player].frozen;
     }
 
     /**

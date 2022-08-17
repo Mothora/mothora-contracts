@@ -1,12 +1,12 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { ethers } from 'hardhat';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy, execute, read } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const essenceMumbai = '0x539bdE0d7Dbd336b79148AA742883198BBF60342';
   const newOwner = '0x3D210e741cDeDeA81efCd9711Ce7ef7FEe45684B';
 
   const artifact = '0x96F791C0C11bAeE97526D5a9674494805aFBEc1c';
@@ -19,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       execute: {
         init: {
           methodName: 'init',
-          args: [essenceMumbai, (await deployments.get('EssenceField')).address],
+          args: [(await deployments.get('Essence')).address, (await deployments.get('EssenceField')).address],
         },
       },
     },
@@ -69,7 +69,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //     callback
   //   );
   // }
+
+  if ((await read('MothoraGame', 'getEssenceAbsorber')) === ethers.constants.AddressZero) {
+    await execute(
+      'MothoraGame',
+      { from: deployer, log: true },
+      'setEssenceAbsorber',
+      (
+        await deployments.get('EssenceAbsorberV2')
+      ).address
+    );
+  }
 };
 export default func;
 func.tags = ['EssenceAbsorberV2'];
-func.dependencies = ['EssenceField'];
+func.dependencies = ['Essence', 'EssenceField', 'MothoraGame'];
