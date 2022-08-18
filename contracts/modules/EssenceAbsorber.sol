@@ -7,12 +7,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MothoraGame} from "../MothoraGame.sol";
-import {GameItems} from "./GameItems.sol";
+import {Artifacts} from "./Artifacts.sol";
 
 contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
-    //=========== DEPENDENCIES ============
-
     using SafeERC20 for IERC20;
+
+    event MothoraGameAddressUpdated(address indexed mothoraGameContractAddress);
 
     //============== STORAGE ==============
 
@@ -80,9 +80,9 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
 
     function contributeArtifacts(uint256 _amount) external nonReentrant activeAccounts {
         require(_amount > 0, "Amount must be more than 0");
-        GameItems gameItemsContract = GameItems(mothoraGameContract.getGameItems());
+        Artifacts artifactsContract = Artifacts(mothoraGameContract.getArtifacts());
         require(
-            gameItemsContract.balanceOf(msg.sender, gameItemsContract.ARTIFACTS()) >= _amount,
+            artifactsContract.balanceOf(msg.sender, artifactsContract.ARTIFACTS()) >= _amount,
             "The Player does not have enough Artifacts"
         );
 
@@ -93,7 +93,7 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         totalVaultPartsContributed += _amount;
 
         // Transfer from player to Staking Contract
-        gameItemsContract.safeTransferFrom(msg.sender, address(this), 0, _amount, "");
+        artifactsContract.safeTransferFrom(msg.sender, address(this), 0, _amount, "");
     }
 
     function unsafeInc(uint256 x) private pure returns (uint256) {
@@ -241,5 +241,22 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
             timeTier[_recipient] = 20;
         }
         return timeTier[_recipient];
+    }
+
+    /**
+     * @dev Returns the address of the Mothora Game Hub Contract
+     * @return The Mothora Game address
+     **/
+    function getMothoraGame() public view returns (address) {
+        return address(mothoraGameContract);
+    }
+
+    /**
+     * @dev Updates the address of the Mothora Game
+     * @param mothoraGameContractAddress The new Mothora Game address
+     **/
+    function setMothoraGame(address mothoraGameContractAddress) external onlyOwner {
+        mothoraGameContract = MothoraGame(mothoraGameContractAddress);
+        emit MothoraGameAddressUpdated(mothoraGameContractAddress);
     }
 }

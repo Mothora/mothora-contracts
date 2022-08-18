@@ -9,23 +9,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const ipfs = 'https://bafybeiex2io5lawckt4bgjjyhmvfy7yk72s4fmhuxj2rgehwzaa6lderkm.ipfs.dweb.link/';
 
-  await deploy('GameItems', {
+  await deploy('Cosmetics', {
     from: deployer,
     log: true,
     args: [ipfs, (await deployments.get('MothoraGame')).address],
   });
 
-  if ((await read('MothoraGame', 'getGameItems')) === ethers.constants.AddressZero) {
+  if ((await read('MothoraGame', 'getCosmetics')) === ethers.constants.AddressZero) {
     await execute(
       'MothoraGame',
       { from: deployer, log: true },
-      'setGameItems',
+      'setCosmetics',
       (
-        await deployments.get('GameItems')
+        await deployments.get('Cosmetics')
       ).address
     );
   }
 };
 export default func;
-func.tags = ['GameItems'];
+func.tags = ['Cosmetics', 'Test'];
 func.dependencies = ['MothoraGame'];

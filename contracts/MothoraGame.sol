@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "./modules/GameItems.sol";
+import {Cosmetics} from "./modules/Cosmetics.sol";
 
 contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     using Counters for Counters.Counter;
@@ -13,7 +13,7 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
 
     enum Faction {
         NONE,
-        VAHNU,
+        THOROKS,
         CONGLOMERATE,
         DOC
     }
@@ -32,12 +32,13 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     // Bytes32 id => contract Address
     mapping(bytes32 => address) private gameProtocolAddresses;
 
-    bytes32 private constant ARENA_MODULE = "ARENA_MODULE";
+    bytes32 private constant ARENA = "ARENA";
+    bytes32 private constant ARTIFACTS = "ARTIFACTS";
+    bytes32 private constant COSMETICS = "COSMETICS";
+    bytes32 private constant CRAFTING = "CRAFTING";
+    bytes32 private constant ESSENCE = "ESSENCE";
     bytes32 private constant ESSENCE_FIELD = "ESSENCE_FIELD";
     bytes32 private constant ESSENCE_ABSORBER = "ESSENCE_ABSORBER";
-    bytes32 private constant ESSENCE = "ESSENCE";
-    bytes32 private constant CRAFTING_MODULE = "CRAFTING_MODULE";
-    bytes32 private constant GAME_ITEMS = "GAME_ITEMS";
 
     event AccountCreated(address indexed player, uint256 id);
     event AccountFrozen(address indexed player);
@@ -46,7 +47,15 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     event EssenceAbsorberUpdated(address indexed essenceAbsorber);
     event EssenceUpdated(address indexed essence);
     event CraftingModuleUpdated(address indexed craftingModule);
-    event GameItemsModuleUpdated(address indexed gameItems);
+    event CosmeticsModuleUpdated(address indexed cosmetics);
+    event ArtifactsModuleUpdated(address indexed artifacts);
+
+    modifier activeAccounts() {
+        uint256 id = getPlayerId(msg.sender);
+        bool frozen = getPlayerStatus(msg.sender);
+        require(id != 0 && !frozen, "ACCOUNT_NOT_ACTIVE");
+        _;
+    }
 
     function init() external initializer {
         _setRoleAdmin(MOTHORA_GAME_MASTER, MOTHORA_GAME_MASTER);
@@ -56,20 +65,21 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
 
     /**
      * @dev Creates an account for a player
-     * @param player The address of the player whose account is being created
+     * @param faction The selected faction id
      **/
-    function createAccount(address player, uint256 faction) external {
-        require(playerAccounts[player].id == 0, "ACCOUNT_ALREADY_EXISTS");
+    function createAccount(uint256 faction) external {
+        _joinFaction(faction);
 
+        // currently using a contract id system
+        // would be changed to Unreal Engine id system
         accountsCounter.increment();
 
-        uint256 tempId = accountsCounter.current();
-        playerAccounts[player].id = tempId;
+        uint256 playerId = accountsCounter.current();
+        playerAccounts[msg.sender].id = playerId;
 
-        _joinFaction(faction);
-        _mintCharacter();
+        _mintCharacterCosmeticSkin();
 
-        emit AccountCreated(player, tempId);
+        emit AccountCreated(msg.sender, playerId);
     }
 
     /**
@@ -82,6 +92,26 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
 
         playerAccounts[player].frozen = true;
         emit AccountFrozen(player);
+    }
+
+    function defect(uint256 newFaction) external activeAccounts {
+        require(newFaction == 1 || newFaction == 2 || newFaction == 3, "INVALID_FACTION_SELECTED");
+        uint256 currentfaction = getPlayerFaction(msg.sender);
+        require(newFaction != currentfaction, "CANNOT_DEFECT_TO_SAME_FACTION");
+
+        totalFactionMembers[currentfaction] -= 1;
+
+        if (newFaction == 1 && currentfaction != 1) {
+            playerAccounts[msg.sender].faction = Faction.THOROKS;
+            totalFactionMembers[1] += 1;
+        } else if (newFaction == 2 && currentfaction != 2) {
+            playerAccounts[msg.sender].faction = Faction.CONGLOMERATE;
+            totalFactionMembers[2] += 1;
+        } else if (newFaction == 3 && currentfaction != 3) {
+            playerAccounts[msg.sender].faction = Faction.DOC;
+            totalFactionMembers[3] += 1;
+        }
+        // TODO restake or unstake Artifacts according to what the player desires
     }
 
     /**
@@ -117,19 +147,19 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
-     * @dev Returns the address of the ARENA_MODULE
-     * @return The ARENA_MODULE address
+     * @dev Returns the address of the ARENA
+     * @return The ARENA address
      **/
     function getArena() public view returns (address) {
-        return getAddress(ARENA_MODULE);
+        return getAddress(ARENA);
     }
 
     /**
-     * @dev Updates the address of the ARENA_MODULE
-     * @param arenaModule The new ARENA_MODULE address
+     * @dev Updates the address of the ARENA
+     * @param arenaModule The new ARENA address
      **/
-    function setArenaModuleAddress(address arenaModule) external onlyRole(MOTHORA_GAME_MASTER) {
-        gameProtocolAddresses[ARENA_MODULE] = arenaModule;
+    function setArena(address arenaModule) external onlyRole(MOTHORA_GAME_MASTER) {
+        gameProtocolAddresses[ARENA] = arenaModule;
         emit ArenaModuleUpdated(arenaModule);
     }
 
@@ -145,7 +175,7 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
      * @dev Updates the address of the ESSENCE_FIELD
      * @param essenceField The new ESSENCE_FIELD address
      **/
-    function setEsssenceField(address essenceField) external onlyRole(MOTHORA_GAME_MASTER) {
+    function setEssenceField(address essenceField) external onlyRole(MOTHORA_GAME_MASTER) {
         gameProtocolAddresses[ESSENCE_FIELD] = essenceField;
         emit EssenceFieldUpdated(essenceField);
     }
@@ -162,7 +192,7 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
      * @dev Updates the address of the ESSENCE_ABSORBER
      * @param essenceAbsorber The new ESSENCE_ABSORBER address
      **/
-    function setEsssenceAbsorber(address essenceAbsorber) external onlyRole(MOTHORA_GAME_MASTER) {
+    function setEssenceAbsorber(address essenceAbsorber) external onlyRole(MOTHORA_GAME_MASTER) {
         gameProtocolAddresses[ESSENCE_ABSORBER] = essenceAbsorber;
         emit EssenceAbsorberUpdated(essenceAbsorber);
     }
@@ -185,44 +215,64 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     }
 
     /**
-     * @dev Returns the address of the CRAFTING_MODULE
-     * @return The CRAFTING_MODULE address
+     * @dev Returns the address of the CRAFTING
+     * @return The CRAFTING address
      **/
     function getCrafting() public view returns (address) {
-        return getAddress(CRAFTING_MODULE);
+        return getAddress(CRAFTING);
     }
 
     /**
-     * @dev Updates the address of the CRAFTING_MODULE
-     * @param craftingModule The new CRAFTING_MODULE address
+     * @dev Updates the address of the CRAFTING
+     * @param crafting The new CRAFTING address
      **/
-    function setCraftingModule(address craftingModule) external onlyRole(MOTHORA_GAME_MASTER) {
-        gameProtocolAddresses[CRAFTING_MODULE] = craftingModule;
-        emit CraftingModuleUpdated(craftingModule);
+    function setCrafting(address crafting) external onlyRole(MOTHORA_GAME_MASTER) {
+        gameProtocolAddresses[CRAFTING] = crafting;
+        emit CraftingModuleUpdated(crafting);
     }
 
     /**
-     * @dev Returns the address of the GAME_ITEMS
-     * @return The GAME_ITEMS address
+     * @dev Returns the address of the COSMETICS
+     * @return The COSMETICS address
      **/
-    function getGameItems() public view returns (address) {
-        return getAddress(GAME_ITEMS);
+    function getCosmetics() public view returns (address) {
+        return getAddress(COSMETICS);
     }
 
     /**
-     * @dev Updates the address of the GAME_ITEMS
-     * @param gameItems The new GAME_ITEMS address
+     * @dev Updates the address of the COSMETICS
+     * @param cosmetics The new COSMETICS address
      **/
-    function setGameItems(address gameItems) external onlyRole(MOTHORA_GAME_MASTER) {
-        gameProtocolAddresses[GAME_ITEMS] = gameItems;
-        emit GameItemsModuleUpdated(gameItems);
+    function setCosmetics(address cosmetics) external onlyRole(MOTHORA_GAME_MASTER) {
+        gameProtocolAddresses[COSMETICS] = cosmetics;
+        emit CosmeticsModuleUpdated(cosmetics);
     }
 
+    /**
+     * @dev Returns the address of the ARTIFACTS
+     * @return The ARTIFACTS address
+     **/
+    function getArtifacts() public view returns (address) {
+        return getAddress(ARTIFACTS);
+    }
+
+    /**
+     * @dev Updates the address of the ARTIFACTS
+     * @param artifacts The new ARTIFACTS address
+     **/
+    function setArtifacts(address artifacts) external onlyRole(MOTHORA_GAME_MASTER) {
+        gameProtocolAddresses[ARTIFACTS] = artifacts;
+        emit ArtifactsModuleUpdated(artifacts);
+    }
+
+    /**
+     * @dev Assigns a faction id to an account
+     **/
     function _joinFaction(uint256 faction) internal {
-        require(uint256(playerAccounts[msg.sender].faction) == 0, "This player already has a faction.");
-        require(faction == 1 || faction == 2 || faction == 3, "Please select a valid faction.");
+        require(playerAccounts[msg.sender].faction == Faction.NONE, "PLAYER_ALREADY_HAS_FACTION");
+        require(faction == 1 || faction == 2 || faction == 3, "INVALID_FACTION");
         if (faction == 1) {
-            playerAccounts[msg.sender].faction = Faction.VAHNU;
+            playerAccounts[msg.sender].faction = Faction.THOROKS;
             totalFactionMembers[1] += 1;
         } else if (faction == 2) {
             playerAccounts[msg.sender].faction = Faction.CONGLOMERATE;
@@ -233,33 +283,13 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
         }
     }
 
-    function _mintCharacter() internal {
-        require(playerAccounts[msg.sender].faction != Faction.NONE, "This Player has no faction yet.");
+    /**
+     * @dev Mints a faction related cosmetic skin
+     **/
+    function _mintCharacterCosmeticSkin() internal {
+        require(playerAccounts[msg.sender].faction != Faction.NONE, "PLAYER_HAS_NO_FACTION");
         uint256 faction = uint256(playerAccounts[msg.sender].faction);
-        require(
-            GameItems(getGameItems()).balanceOf(msg.sender, faction) == 0,
-            "The Player can only mint 1 Character of each type."
-        );
-        GameItems(getGameItems()).mintCharacter(msg.sender, faction);
+        require(Cosmetics(getCosmetics()).balanceOf(msg.sender, faction) == 0, "ONLY_ONE_SKIN_PER_FACTION");
+        Cosmetics(getCosmetics()).mintCharacter(msg.sender, faction);
     }
-
-    /*
-        function defect(uint256 _newFaction) external {
-        require(_newFaction == 1 || _newFaction == 2 || _newFaction == 3, "Please select a valid faction.");
-        uint256 currentfaction = getFaction(msg.sender);
-        totalFactionMembers[currentfaction] -= 1;
-        if (_newFaction == 1 && players[msg.sender].faction != Faction.VAHNU) {
-            players[msg.sender].faction = Faction.VAHNU;
-            totalFactionMembers[1] += 1;
-        } else if (_newFaction == 2 && players[msg.sender].faction != Faction.CONGLOMERATE) {
-            players[msg.sender].faction = Faction.CONGLOMERATE;
-            totalFactionMembers[2] += 1;
-        } else if (_newFaction == 3 && players[msg.sender].faction != Faction.DOC) {
-            players[msg.sender].faction = Faction.DOC;
-            totalFactionMembers[3] += 1;
-        }
-        // TODO burn all vault part NFTs this wallet has on it.
-        // Joao: instead of burning they could be given away to their current faction
-    }
-    */
 }

@@ -22,10 +22,9 @@ const config: HardhatUserConfig = {
         url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_TOKEN}`,
       },
       live: false,
-      saveDeployments: true,
       tags: ['test', 'local'],
       chainId: 1337,
-      deploy: ['deploy/mumbai'],
+      deploy: ['deploy'],
     },
     goerli: {
       url: 'https://eth-goerli.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
@@ -34,7 +33,7 @@ const config: HardhatUserConfig = {
       },
       saveDeployments: true,
       gasPrice: 65 * GWEI,
-      deploy: ['deploy/goerli'],
+      deploy: ['deploy'],
       live: true,
     },
     arbitrumRinkeby: {
@@ -43,7 +42,7 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.MNEMONIC as string,
       },
       saveDeployments: true,
-      deploy: ['deploy/arbitrumRinkeby'],
+      deploy: ['deploy'],
       live: true,
     },
     mumbai: {
@@ -53,7 +52,7 @@ const config: HardhatUserConfig = {
       },
       saveDeployments: true,
       gasPrice: 1100000000,
-      deploy: ['deploy/mumbai'],
+      deploy: ['deploy'],
       live: true,
     },
     hardhatevm: {
@@ -61,7 +60,7 @@ const config: HardhatUserConfig = {
       blockGasLimit: 9500000,
       gas: 9500000,
       gasPrice: 8000000000,
-      chainId: 31337,
+      chainId: 1337,
       throwOnTransactionFailures: true,
       throwOnCallFailures: true,
       url: 'http://localhost:8545',

@@ -6,7 +6,7 @@ import { deployMockContract } from 'ethereum-waffle';
 const { ethers, deployments, getNamedAccounts, artifacts } = hre;
 const { deploy } = deployments;
 
-describe.only('EssenceAbsorber', function () {
+describe.only('EssenceAbsorberV2', function () {
   let essenceAbsorber: any, essenceField: any, mockIArtifactMetadataStore: any;
   let essenceToken: any, absorberRods: any, artifact: any;
   let staker1: any, staker2: any, staker3: any, hacker: any, deployer: any;

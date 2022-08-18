@@ -7,23 +7,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy, execute, read } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy('Essence', {
+  const ipfs = 'https://bafybeiex2io5lawckt4bgjjyhmvfy7yk72s4fmhuxj2rgehwzaa6lderkm.ipfs.dweb.link/';
+
+  await deploy('Artifacts', {
     from: deployer,
     log: true,
-    args: [],
+    args: [ipfs, (await deployments.get('MothoraGame')).address],
   });
 
-  if ((await read('MothoraGame', 'getEssence')) === ethers.constants.AddressZero) {
+  if ((await read('MothoraGame', 'getArtifacts')) === ethers.constants.AddressZero) {
     await execute(
       'MothoraGame',
       { from: deployer, log: true },
-      'setEssence',
+      'setArtifacts',
       (
-        await deployments.get('Essence')
+        await deployments.get('Artifacts')
       ).address
     );
   }
 };
 export default func;
-func.tags = ['Essence'];
+func.tags = ['Artifacts', 'Test'];
 func.dependencies = ['MothoraGame'];

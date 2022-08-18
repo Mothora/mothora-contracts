@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
-import {Player} from "../Player.sol";
 
-contract MockPlayer is Player {
-    constructor(uint64 subscriptionId) Player(subscriptionId) {}
+contract MockPlayer {
+    //constructor(uint64 subscriptionId) Player(subscriptionId) {}
+    constructor(uint64 subscriptionId) {}
 
+    /*
     function mockClaimQuestRewards(uint256 requestId) external {
         require(
             players[msg.sender].characterFullofRewards == true,
@@ -37,4 +38,5 @@ contract MockPlayer is Player {
             gameItemsContract.mintArtifacts(player, 1);
         }
     }
+    */
 }

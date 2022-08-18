@@ -7,14 +7,14 @@ import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/interfaces/LinkT
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import {MothoraGame} from "../MothoraGame.sol";
-import {GameItems} from "./GameItems.sol";
+import {Artifacts} from "./Artifacts.sol";
 
 contract Arena is VRFConsumerBaseV2, Ownable {
     using Counters for Counters.Counter;
 
     Counters.Counter public arenaSessionsCounter;
     //===============Events================
-
+    event MothoraGameAddressUpdated(address indexed mothoraGameContractAddress);
     event ArenaSessionCreated(uint256 indexed arenaId, address indexed creator);
     event ArenaSessionPostgame(uint256 indexed arenaId);
     event ArenaSessionRewarded(uint256 indexed arenaId);
@@ -135,7 +135,7 @@ contract Arena is VRFConsumerBaseV2, Ownable {
      * @dev For the current purpose will only determine rewards randomly and give a guaranteed extra reward to the callee of this function
      * @param arenaId The id of the arena
      **/
-    function terminateArenaSession(uint256 arenaId) external {
+    function terminateArenaSession(uint256 arenaId) external activeAccounts {
         require(playerInSession[msg.sender] == arenaId, "TERMINATOR_NOT_IN_SESSION");
         require(arenaSessionData[arenaId].status == Status.INGAME, "SESSION_NOT_INGAME");
         arenaSessionData[arenaId].status = Status.POSTGAME;
@@ -168,7 +168,7 @@ contract Arena is VRFConsumerBaseV2, Ownable {
         uint256 artifactsToMint;
         uint256 random;
         address player;
-        GameItems gameItemsContract = GameItems(mothoraGameContract.getGameItems());
+        Artifacts artifactsContract = Artifacts(mothoraGameContract.getArtifacts());
 
         for (uint256 i = 1; i <= playerNumber; i = unsafeInc(i)) {
             artifactsToMint = 0;
@@ -181,18 +181,18 @@ contract Arena is VRFConsumerBaseV2, Ownable {
             }
             if (random >= 800) {
                 artifactsToMint += 4;
-                gameItemsContract.mintArtifacts(player, artifactsToMint);
+                artifactsContract.mintArtifacts(player, artifactsToMint);
             } else if (random < 800 && random >= 600) {
                 artifactsToMint += 3;
-                gameItemsContract.mintArtifacts(player, artifactsToMint);
+                artifactsContract.mintArtifacts(player, artifactsToMint);
             } else if (random < 600 && random >= 400) {
                 artifactsToMint += 2;
-                gameItemsContract.mintArtifacts(player, artifactsToMint);
+                artifactsContract.mintArtifacts(player, artifactsToMint);
             } else if (random < 400 && random >= 200) {
                 artifactsToMint += 1;
-                gameItemsContract.mintArtifacts(player, artifactsToMint);
+                artifactsContract.mintArtifacts(player, artifactsToMint);
             } else if (random < 200) {
-                gameItemsContract.mintArtifacts(player, artifactsToMint);
+                artifactsContract.mintArtifacts(player, artifactsToMint);
             }
             // reset session for player to be able to join a new game
             playerInSession[player] = 0;
@@ -205,5 +205,22 @@ contract Arena is VRFConsumerBaseV2, Ownable {
         unchecked {
             return x + 1;
         }
+    }
+
+    /**
+     * @dev Returns the address of the Mothora Game Hub Contract
+     * @return The Mothora Game address
+     **/
+    function getMothoraGame() public view returns (address) {
+        return address(mothoraGameContract);
+    }
+
+    /**
+     * @dev Updates the address of the Mothora Game
+     * @param mothoraGameContractAddress The new Mothora Game address
+     **/
+    function setMothoraGame(address mothoraGameContractAddress) external onlyOwner {
+        mothoraGameContract = MothoraGame(mothoraGameContractAddress);
+        emit MothoraGameAddressUpdated(mothoraGameContractAddress);
     }
 }

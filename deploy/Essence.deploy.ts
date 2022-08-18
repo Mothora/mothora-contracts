@@ -6,17 +6,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy, execute, read } = deployments;
   const { deployer } = await getNamedAccounts();
-  const subscriptionId = 4948;
 
-  await deploy('Arena', {
+  await deploy('Essence', {
     from: deployer,
     log: true,
-    args: [subscriptionId, (await deployments.get('MothoraGame')).address],
+    args: [],
   });
-  if ((await read('MothoraGame', 'getArena')) === ethers.constants.AddressZero) {
-    await execute('MothoraGame', { from: deployer, log: true }, 'setArena', (await deployments.get('Arena')).address);
+
+  if ((await read('MothoraGame', 'getEssence')) === ethers.constants.AddressZero) {
+    await execute(
+      'MothoraGame',
+      { from: deployer, log: true },
+      'setEssence',
+      (
+        await deployments.get('Essence')
+      ).address
+    );
   }
 };
 export default func;
-func.tags = ['Arena'];
+func.tags = ['Essence', 'Test'];
 func.dependencies = ['MothoraGame'];

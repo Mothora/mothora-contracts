@@ -10,9 +10,6 @@ describe.only('EssenceField', function () {
   let essenceToken: any;
   let flow1: any, flow2: any, flow3: any, hacker: any, deployer: any;
   let flow1Signer: any, flow2Signer: any, flow3Signer: any, hackerSigner: any, deployerSigner: any;
-  let checkDeposit: any;
-  let checkPendingRewardsPosition: any;
-  let checkIndexes: any;
 
   before(async function () {
     const namedAccounts = await getNamedAccounts();
@@ -40,11 +37,6 @@ describe.only('EssenceField', function () {
       const EssenceField = await deployments.get('EssenceField');
       essenceField = new ethers.Contract(EssenceField.address, EssenceField.abi, deployerSigner);
       await essenceField.setEssenceToken(essenceToken.address);
-
-      // const EssenceField = await ethers.getContractFactory('EssenceField')
-      // essenceField = await EssenceField.deploy()
-      // await essenceField.deployed();
-      // await essenceField.init(essenceToken.address);
     });
 
     it('Reverts on contract already initialized', async function () {
