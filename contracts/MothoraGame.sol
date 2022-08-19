@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
@@ -26,6 +26,8 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     }
     bytes32 public constant MOTHORA_GAME_MASTER = keccak256("MOTHORA_GAME_MASTER");
 
+    address[] private accountAddresses;
+
     // Player address => Struct Account
     mapping(address => Account) private playerAccounts;
 
@@ -41,7 +43,7 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     bytes32 private constant ESSENCE_ABSORBER = "ESSENCE_ABSORBER";
 
     event AccountCreated(address indexed player, uint256 id);
-    event AccountFrozen(address indexed player);
+    event AccountStatusChanged(address indexed player, bool freezeStatus);
     event ArenaModuleUpdated(address indexed arenaModule);
     event EssenceFieldUpdated(address indexed essenceField);
     event EssenceAbsorberUpdated(address indexed essenceAbsorber);
@@ -76,6 +78,7 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
 
         uint256 playerId = accountsCounter.current();
         playerAccounts[msg.sender].id = playerId;
+        accountAddresses.push(msg.sender);
 
         _mintCharacterCosmeticSkin();
 
@@ -85,13 +88,13 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     /**
      * @dev Freezes an account for a player
      * @param player The address of the player whose account is being frozen
+     * @param freezeStatus Whether to freeze or unfreeze the account
      **/
-    function freezeAccount(address player) public onlyRole(MOTHORA_GAME_MASTER) {
+    function changeFreezeStatus(address player, bool freezeStatus) public onlyRole(MOTHORA_GAME_MASTER) {
         require(playerAccounts[player].id != 0, "ACCOUNT_DOES_NOT_EXIST");
-        require(!playerAccounts[player].frozen, "ACCOUNT_ALREADY_FROZEN");
 
-        playerAccounts[player].frozen = true;
-        emit AccountFrozen(player);
+        playerAccounts[player].frozen = freezeStatus;
+        emit AccountStatusChanged(player, freezeStatus);
     }
 
     function defect(uint256 newFaction) external activeAccounts {
@@ -136,6 +139,14 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
      */
     function getPlayerStatus(address player) public view returns (bool) {
         return playerAccounts[player].frozen;
+    }
+
+    /**
+     * @dev Returns all active players
+     * @return Frozen status
+     */
+    function getAllActivePlayers() public view returns (address[] memory) {
+        return accountAddresses;
     }
 
     /**
@@ -263,6 +274,12 @@ contract MothoraGame is Initializable, AccessControlEnumerableUpgradeable {
     function setArtifacts(address artifacts) external onlyRole(MOTHORA_GAME_MASTER) {
         gameProtocolAddresses[ARTIFACTS] = artifacts;
         emit ArtifactsModuleUpdated(artifacts);
+    }
+
+    function unsafeInc(uint256 x) private pure returns (uint256) {
+        unchecked {
+            return x + 1;
+        }
     }
 
     /**

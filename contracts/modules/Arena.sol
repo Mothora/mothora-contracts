@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -35,10 +35,10 @@ contract Arena is VRFConsumerBaseV2, Ownable {
     }
 
     // arena session id to arena data
-    mapping(uint256 => ArenaData) arenaSessionData;
+    mapping(uint256 => ArenaData) internal arenaSessionData;
 
     // Reverse Mapping ± player => arena session id = 0 if in no session
-    mapping(address => uint256) playerInSession;
+    mapping(address => uint256) internal playerInSession;
 
     MothoraGame mothoraGameContract;
 
@@ -87,46 +87,55 @@ contract Arena is VRFConsumerBaseV2, Ownable {
         mothoraGameContract = mothoraGame;
     }
 
+    struct ArenaSessionLocalVars {
+        bool tempFrozenStatus;
+        address player;
+        uint256 playerNumber;
+        uint256 arenaId;
+        uint256 tempPlayerId;
+        uint256 tempFaction;
+        uint256[4] factionMembers;
+    }
+
     /**
      * @dev Starts an arena session
      * @param players The addresses of players that will participate in the arena
      **/
     function startArenaSession(address[] memory players) external activeAccounts {
-        uint256 playerNumber = players.length;
+        ArenaSessionLocalVars memory vars;
 
-        require(playerNumber < sessionMaxSize, "INVALID_SESSION_SIZE");
+        vars.playerNumber = players.length;
+
+        require(vars.playerNumber < sessionMaxSize, "INVALID_SESSION_SIZE");
 
         arenaSessionsCounter.increment();
 
-        uint256 arenaId = arenaSessionsCounter.current();
-        uint256 tempPlayerId;
-        uint256 tempFaction;
-        bool tempFrozenStatus;
-        address player;
-        uint256[4] memory factionMembers;
+        vars.arenaId = arenaSessionsCounter.current();
 
-        for (uint256 i = 1; i <= playerNumber; i = unsafeInc(i)) {
-            player = players[i];
-            tempPlayerId = mothoraGameContract.getPlayerId(player);
-            tempFrozenStatus = mothoraGameContract.getPlayerStatus(player);
-            tempFaction = mothoraGameContract.getPlayerFaction(player);
-            factionMembers[tempFaction] += 1;
+        for (uint256 i = 0; i < vars.playerNumber; i = unsafeInc(i)) {
+            vars.player = players[i];
 
-            require(tempPlayerId != 0 && !tempFrozenStatus, "ACCOUNT_NOT_ACTIVE");
-            require(playerInSession[player] == 0, "PLAYER_IN_A_SESSION");
+            vars.tempPlayerId = mothoraGameContract.getPlayerId(vars.player);
+            vars.tempFrozenStatus = mothoraGameContract.getPlayerStatus(vars.player);
+            vars.tempFaction = mothoraGameContract.getPlayerFaction(vars.player);
 
-            arenaSessionData[arenaId].players.push(player);
-            playerInSession[player] = arenaId;
+            require(vars.tempPlayerId != 0 && !vars.tempFrozenStatus, "ACCOUNT_NOT_ACTIVE");
+            // If a player is marked to be in a session already and is repeated, it will be flagged here as a duplicate
+            require(playerInSession[vars.player] == 0, "PLAYER_IN_SESSION_OR_DUPLICATE");
+
+            vars.factionMembers[vars.tempFaction] += 1;
+            arenaSessionData[vars.arenaId].players.push(vars.player);
+            playerInSession[vars.player] = vars.arenaId;
         }
-        require(playerInSession[msg.sender] == arenaId, "CREATOR_NOT_IN_SESSION");
+        require(playerInSession[msg.sender] == vars.arenaId, "CREATOR_NOT_IN_SESSION");
 
         for (uint256 i = 1; i <= 3; i = unsafeInc(i)) {
-            require(factionMembers[i] > 0, "NOT_ENOUGH_FACTION_MEMBERS");
+            require(vars.factionMembers[i] > 0, "NOT_ENOUGH_FACTION_MEMBERS");
         }
 
-        arenaSessionData[arenaId].status = Status.INGAME;
+        arenaSessionData[vars.arenaId].status = Status.INGAME;
 
-        emit ArenaSessionCreated(arenaId, msg.sender);
+        emit ArenaSessionCreated(vars.arenaId, msg.sender);
     }
 
     /**
@@ -160,7 +169,7 @@ contract Arena is VRFConsumerBaseV2, Ownable {
         uint256 arenaId = playerInSession[terminator];
 
         require(arenaId != 0, "SESSION_MUST_EXIST");
-        require(arenaSessionData[arenaId].status == Status.INGAME, "SESSION_ALREADY_REWARDED");
+        require(arenaSessionData[arenaId].status == Status.POSTGAME, "SESSION_ALREADY_REWARDED");
 
         arenaSessionData[arenaId].status = Status.REWARDED;
 
@@ -170,7 +179,7 @@ contract Arena is VRFConsumerBaseV2, Ownable {
         address player;
         Artifacts artifactsContract = Artifacts(mothoraGameContract.getArtifacts());
 
-        for (uint256 i = 1; i <= playerNumber; i = unsafeInc(i)) {
+        for (uint256 i = 0; i < playerNumber; i = unsafeInc(i)) {
             artifactsToMint = 0;
             player = arenaSessionData[arenaId].players[i];
             random = (randomWords[i] % 1000) + 1;
@@ -205,6 +214,23 @@ contract Arena is VRFConsumerBaseV2, Ownable {
         unchecked {
             return x + 1;
         }
+    }
+
+    /**
+     * @dev Returns the address of the Mothora Game Hub Contract
+     **/
+    function getArenaSessionData(uint256 arenaId) public view returns (uint256 status, address[] memory players) {
+        ArenaData memory tempData = arenaSessionData[arenaId];
+
+        status = uint256(tempData.status);
+        players = tempData.players;
+    }
+
+    /**
+     * @dev Returns the id of the arena the player is in, 0 if not playing
+     **/
+    function getPlayerInSession(address player) public view returns (uint256 arenaId) {
+        arenaId = playerInSession[player];
     }
 
     /**

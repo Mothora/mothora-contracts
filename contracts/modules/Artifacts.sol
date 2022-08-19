@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -13,9 +13,6 @@ contract Artifacts is ERC1155, Ownable {
     mapping(uint256 => string) private _uris;
 
     uint256 public constant ARTIFACTS = 0;
-    uint256 public constant THOROKS = 1;
-    uint256 public constant CONGLOMERATE = 2;
-    uint256 public constant DOC = 3;
 
     MothoraGame mothoraGameContract;
 

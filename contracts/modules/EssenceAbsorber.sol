@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,19 +24,20 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
     mapping(address => uint256) public lastUpdate;
     mapping(address => uint256) public timeTier;
 
-    mapping(address => uint256) public playerStakedPartsBalance;
-    mapping(uint256 => uint256) public factionPartsBalance;
+    mapping(address => uint256) public playerStakedArtifactsBalance;
+    mapping(uint256 => uint256) public factionArtifactsBalance;
 
     MothoraGame mothoraGameContract;
 
     // Rewards Function variables
     uint256 public totalStakedBalance;
     uint256 public epochRewards;
-    uint256 public totalVaultPartsContributed;
+    uint256 public totalArtifactsContributed;
     uint256 public lastDistributionTime;
     uint256 public epochRewardsPercentage;
     uint256 public epochDuration;
     uint256 public epochStartTime;
+    // keeps a registry of all active players who staked
     address[] public playerAddresses;
     uint256 public playerId;
 
@@ -60,52 +61,87 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         _;
     }
 
+    modifier existingAccounts() {
+        uint256 id = mothoraGameContract.getPlayerId(msg.sender);
+        require(id != 0, "ACCOUNT_DOES_NOT_EXIST");
+        _;
+    }
+
     //============== FUNCTIONS =============
+    /**
+     * @dev Allows active accounts only to stake tokens
+     * @param amount amount to be staked
+     */
+    function stakeTokens(uint256 amount) public nonReentrant activeAccounts {
+        require(amount > 0, "AMOUNT_NOT_HIGHER_THAN_0");
+        _stakeTokens(amount);
 
-    function stakeTokens(uint256 _amount) public nonReentrant activeAccounts {
-        require(_amount > 0, "Amount must be more than 0.");
-        IERC20(mothoraGameContract.getEssence()).safeTransferFrom(msg.sender, address(this), _amount);
-
-        _stakeTokens(_amount);
+        IERC20(mothoraGameContract.getEssence()).safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function unstakeTokens(uint256 _amount) external nonReentrant activeAccounts {
-        require(_amount > 0, "Amount must be more than 0.");
-        require(stakedESSBalance[msg.sender] > 0, "Staking balance cannot be 0");
-        require(_amount <= stakedESSBalance[msg.sender], "Cannot unstake more than your staked balance");
+    /**
+     * @dev Allows any existing account to unstake (including frozen accounts, which cannot stake anymore)
+     * @param amount amount to be staked
+     */
+    function unstakeTokens(uint256 amount) external nonReentrant existingAccounts {
+        require(amount > 0, "AMOUNT_IS_0");
+        require(stakedESSBalance[msg.sender] > 0, "STAKED_BALANCE_IS_0");
+        require(amount <= stakedESSBalance[msg.sender], "INVALID_UNSTAKE_OPERATION");
 
-        stakedESSBalance[msg.sender] -= _amount;
-        totalStakedBalance -= _amount;
+        stakedESSBalance[msg.sender] -= amount;
+        totalStakedBalance -= amount;
+
+        // transfer from contract to player
+        IERC20(mothoraGameContract.getEssence()).safeTransfer(msg.sender, amount);
     }
 
-    function contributeArtifacts(uint256 _amount) external nonReentrant activeAccounts {
-        require(_amount > 0, "Amount must be more than 0");
+    /**
+     * @dev Stakes artifacts in the absorber, only active accounts can stake
+     * @param amount amount to be staked
+     */
+    function stakeArtifacts(uint256 amount) external nonReentrant activeAccounts {
+        require(amount > 0, "AMOUNT_IS_0");
         Artifacts artifactsContract = Artifacts(mothoraGameContract.getArtifacts());
-        require(
-            artifactsContract.balanceOf(msg.sender, artifactsContract.ARTIFACTS()) >= _amount,
-            "The Player does not have enough Artifacts"
-        );
+        require(artifactsContract.balanceOf(msg.sender, artifactsContract.ARTIFACTS()) >= amount, "NOT_ENOUGH_BALANCE");
 
-        playerStakedPartsBalance[msg.sender] += _amount;
+        playerStakedArtifactsBalance[msg.sender] += amount;
         uint256 faction = mothoraGameContract.getPlayerFaction(msg.sender);
 
-        factionPartsBalance[faction] += _amount;
-        totalVaultPartsContributed += _amount;
+        factionArtifactsBalance[faction] += amount;
+        totalArtifactsContributed += amount;
 
         // Transfer from player to Staking Contract
-        artifactsContract.safeTransferFrom(msg.sender, address(this), 0, _amount, "");
+        artifactsContract.safeTransferFrom(msg.sender, address(this), 0, amount, "");
     }
 
-    function unsafeInc(uint256 x) private pure returns (uint256) {
-        unchecked {
-            return x + 1;
-        }
+    /**
+     * @dev Unstakes artifacts from the absorber. Any existing account can unstake
+     * @param amount amount to be unstaked
+     */
+    function unstakeArtifacts(uint256 amount) external nonReentrant existingAccounts {
+        require(amount > 0, "AMOUNT_IS_0");
+        require(playerStakedArtifactsBalance[msg.sender] > 0, "STAKED_BALANCE_IS_0");
+        require(amount <= playerStakedArtifactsBalance[msg.sender], "INVALID_UNSTAKE_OPERATION");
+
+        playerStakedArtifactsBalance[msg.sender] -= amount;
+        uint256 faction = mothoraGameContract.getPlayerFaction(msg.sender);
+
+        factionArtifactsBalance[faction] -= amount;
+        totalArtifactsContributed -= amount;
+
+        Artifacts artifactsContract = Artifacts(mothoraGameContract.getArtifacts());
+        // Transfer from contract to player
+        artifactsContract.safeTransferFrom(address(this), msg.sender, 0, amount, "");
     }
 
+    /**
+     * @dev Admin function to distribute rewards after a given epoch. It operates in a push basis
+     * @dev Given this operation mode it has serious limitations given the loops. A better implementation is to create a pull based system
+     **/
     function distributeRewards() external onlyOwner {
-        require(totalStakedBalance > 0, "There are no tokens staked");
+        require(totalStakedBalance > 0, "NO_TOKENS_STAKED");
         uint256 lastEpochTime = epochStartTime + epochDuration * (((block.timestamp - epochStartTime) / epochDuration));
-        require(lastDistributionTime < lastEpochTime, "The player has already claimed in this epoch");
+        require(lastDistributionTime < lastEpochTime, "DISTRIBUTION_ALREADY_HAPPENED");
         // total staked balance * APR percentage * 10min/1 year -> rewards in a given epoch of 10 minute
         epochRewards = divider(totalStakedBalance * epochRewardsPercentage * 600, 31536000 * 100, 0);
 
@@ -125,24 +161,24 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
             }
         }
 
-        maxedFactor2 = totalVaultPartsContributed;
+        maxedFactor2 = totalArtifactsContributed;
         maxedFactor3 =
             mothoraGameContract.totalFactionMembers(1) *
-            factionPartsBalance[1] +
+            factionArtifactsBalance[1] +
             mothoraGameContract.totalFactionMembers(2) *
-            factionPartsBalance[2] +
+            factionArtifactsBalance[2] +
             mothoraGameContract.totalFactionMembers(3) *
-            factionPartsBalance[3];
+            factionArtifactsBalance[3];
 
         if (maxedFactor2 != 0) {
             uint256 faction;
             // Distributes the rewards
             for (uint256 i = 1; i <= playerId; i = unsafeInc(i)) {
                 factor1 = (stakedESSBalance[playerAddresses[i - 1]] * _calculateTimeTier(_playerAddresses[i - 1]));
-                factor2 = playerStakedPartsBalance[_playerAddresses[i - 1]];
+                factor2 = playerStakedArtifactsBalance[_playerAddresses[i - 1]];
                 faction = mothoraGameContract.getPlayerFaction(_playerAddresses[i - 1]);
 
-                factor3 = factionPartsBalance[faction];
+                factor3 = factionArtifactsBalance[faction];
 
                 RewardsBalance[_playerAddresses[i - 1]] +=
                     divider(factor1 * 70 * _epochRewards, maxedFactor1 * 100, 0) +
@@ -160,7 +196,11 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         lastDistributionTime = block.timestamp;
     }
 
-    function claimEpochRewards(bool autocompound) external activeAccounts {
+    /**
+     * @dev Claims the rewards of a given epoch. If autocompound is true it re-stakes the tokens harvested, otherwise withdraws them
+     * @param autocompound true or false
+     **/
+    function claimEpochRewards(bool autocompound) external existingAccounts {
         uint256 transferValue = RewardsBalance[msg.sender];
         RewardsBalance[msg.sender] = 0;
 
@@ -171,14 +211,9 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         }
     }
 
-    function divider(
-        uint256 numerator,
-        uint256 denominator,
-        uint256 precision
-    ) public pure returns (uint256) {
-        return ((numerator * (uint256(10)**uint256(precision + 1))) / denominator + 5) / uint256(10);
-    }
-
+    /**
+     * @dev Returns the players' balances
+     **/
     function getTotalBalance(address _player)
         external
         view
@@ -195,18 +230,42 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         return (balance, stakedBalance, pendingRewards);
     }
 
-    function getPlayerVaultPartsBalance(address _player) external view returns (uint256 playerVaultPartsBalance) {
-        playerVaultPartsBalance = playerStakedPartsBalance[_player];
-
-        return playerVaultPartsBalance;
+    /**
+     * @dev Returns the current number of staked artifacts
+     * @return The number of staked artifacts
+     **/
+    function getPlayerVaultPartsBalance(address _player) external view returns (uint256) {
+        return playerStakedArtifactsBalance[_player];
     }
 
-    function getFactionVaultPartsBalance(uint256 _faction) external view returns (uint256 factionVaultPartsBalance) {
-        factionVaultPartsBalance = factionPartsBalance[_faction];
-
-        return factionVaultPartsBalance;
+    /**
+     * @dev Returns the current number of staked artifacts per faction
+     * @return The number of staked artifacts
+     **/
+    function getFactionVaultPartsBalance(uint256 _faction) external view returns (uint256) {
+        return factionArtifactsBalance[_faction];
     }
 
+    /**
+     * @dev Returns the address of the Mothora Game Hub Contract
+     * @return The Mothora Game address
+     **/
+    function getMothoraGame() public view returns (address) {
+        return address(mothoraGameContract);
+    }
+
+    /**
+     * @dev Updates the address of the Mothora Game
+     * @param mothoraGameContractAddress The new Mothora Game address
+     **/
+    function setMothoraGame(address mothoraGameContractAddress) external onlyOwner {
+        mothoraGameContract = MothoraGame(mothoraGameContractAddress);
+        emit MothoraGameAddressUpdated(mothoraGameContractAddress);
+    }
+
+    /**
+     * @dev Performs internal operations of staking, including adding the active account to the registry
+     */
     function _stakeTokens(uint256 _amount) internal {
         uint256 initialStakedAmount = stakedESSBalance[msg.sender];
 
@@ -227,6 +286,9 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         totalStakedBalance += _amount;
     }
 
+    /**
+     * @dev Determines boost for the time locked up until now
+     */
     function _calculateTimeTier(address _recipient) private returns (uint256) {
         stakedDuration[_recipient] += (block.timestamp - lastUpdate[_recipient]);
         lastUpdate[_recipient] = block.timestamp;
@@ -243,20 +305,17 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
         return timeTier[_recipient];
     }
 
-    /**
-     * @dev Returns the address of the Mothora Game Hub Contract
-     * @return The Mothora Game address
-     **/
-    function getMothoraGame() public view returns (address) {
-        return address(mothoraGameContract);
+    function divider(
+        uint256 numerator,
+        uint256 denominator,
+        uint256 precision
+    ) public pure returns (uint256) {
+        return ((numerator * (uint256(10)**uint256(precision + 1))) / denominator + 5) / uint256(10);
     }
 
-    /**
-     * @dev Updates the address of the Mothora Game
-     * @param mothoraGameContractAddress The new Mothora Game address
-     **/
-    function setMothoraGame(address mothoraGameContractAddress) external onlyOwner {
-        mothoraGameContract = MothoraGame(mothoraGameContractAddress);
-        emit MothoraGameAddressUpdated(mothoraGameContractAddress);
+    function unsafeInc(uint256 x) private pure returns (uint256) {
+        unchecked {
+            return x + 1;
+        }
     }
 }
