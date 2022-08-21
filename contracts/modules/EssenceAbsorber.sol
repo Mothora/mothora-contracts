@@ -234,7 +234,7 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
      * @dev Returns the current number of staked artifacts
      * @return The number of staked artifacts
      **/
-    function getPlayerVaultPartsBalance(address _player) external view returns (uint256) {
+    function getPlayerArtifactsBalance(address _player) external view returns (uint256) {
         return playerStakedArtifactsBalance[_player];
     }
 
@@ -242,7 +242,7 @@ contract EssenceAbsorber is Ownable, ReentrancyGuard, ERC1155Holder {
      * @dev Returns the current number of staked artifacts per faction
      * @return The number of staked artifacts
      **/
-    function getFactionVaultPartsBalance(uint256 _faction) external view returns (uint256) {
+    function getFactionArtifactsBalance(uint256 _faction) external view returns (uint256) {
         return factionArtifactsBalance[_faction];
     }
 

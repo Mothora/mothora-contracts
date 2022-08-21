@@ -13,16 +13,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
   });
 
-  if ((await read('MothoraGame', 'getEssence')) === ethers.constants.AddressZero) {
-    await execute(
-      'MothoraGame',
-      { from: deployer, log: true },
-      'setEssence',
-      (
-        await deployments.get('Essence')
-      ).address
-    );
-  }
+  await execute('MothoraGame', { from: deployer, log: true }, 'setEssence', (await deployments.get('Essence')).address);
 };
 export default func;
 func.tags = ['Essence', 'Test'];

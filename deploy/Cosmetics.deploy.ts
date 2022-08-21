@@ -15,16 +15,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [ipfs, (await deployments.get('MothoraGame')).address],
   });
 
-  if ((await read('MothoraGame', 'getCosmetics')) === ethers.constants.AddressZero) {
-    await execute(
-      'MothoraGame',
-      { from: deployer, log: true },
-      'setCosmetics',
-      (
-        await deployments.get('Cosmetics')
-      ).address
-    );
-  }
+  await execute(
+    'MothoraGame',
+    { from: deployer, log: true },
+    'setCosmetics',
+    (
+      await deployments.get('Cosmetics')
+    ).address
+  );
 };
 export default func;
 func.tags = ['Cosmetics', 'Test'];

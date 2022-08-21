@@ -29,16 +29,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await execute('EssenceField', { from: deployer, log: true }, 'grantRole', ESSENCE_FIELD_CREATOR_ROLE, newOwner);
   }
 
-  if ((await read('MothoraGame', 'getEssenceField')) === ethers.constants.AddressZero) {
-    await execute(
-      'MothoraGame',
-      { from: deployer, log: true },
-      'setEssenceField',
-      (
-        await deployments.get('EssenceField')
-      ).address
-    );
-  }
+  await execute(
+    'MothoraGame',
+    { from: deployer, log: true },
+    'setEssenceField',
+    (
+      await deployments.get('EssenceField')
+    ).address
+  );
 };
 export default func;
 func.tags = ['EssenceField'];

@@ -70,16 +70,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   //   );
   // }
 
-  if ((await read('MothoraGame', 'getEssenceAbsorber')) === ethers.constants.AddressZero) {
-    await execute(
-      'MothoraGame',
-      { from: deployer, log: true },
-      'setEssenceAbsorber',
-      (
-        await deployments.get('EssenceAbsorberV2')
-      ).address
-    );
-  }
+  await execute(
+    'MothoraGame',
+    { from: deployer, log: true },
+    'setEssenceAbsorber',
+    (
+      await deployments.get('EssenceAbsorberV2')
+    ).address
+  );
 };
 export default func;
 func.tags = ['EssenceAbsorberV2'];
