@@ -1,81 +1,66 @@
+import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
 import '@nomiclabs/hardhat-waffle';
 import '@openzeppelin/hardhat-upgrades';
 import '@primitivefi/hardhat-marmite';
 import '@typechain/hardhat';
-import * as dotenv from 'dotenv';
+import 'dotenv/config';
+import { HardhatUserConfig } from 'hardhat/config';
+import 'hardhat-deploy';
+import 'hardhat-deploy-ethers';
 import 'hardhat-gas-reporter';
-import { HardhatUserConfig, task } from 'hardhat/config';
 import 'solidity-coverage';
 
-dotenv.config();
 const GWEI = 1000 * 1000 * 1000;
 
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
-    rinkeby: {
-      url: 'https://rinkeby.infura.io/v3/' + process.env.INFURA_KEY,
-      //url: 'https://eth-rinkeby.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
-      accounts: {
-        mnemonic: process.env.MNEMONIC as string,
+    hardhat: {
+      forking: {
+        enabled: process.env.FORKING === 'true',
+        url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_TOKEN}`,
       },
-      gas: 2100000,
-      gasPrice: 8000000000,
-    },
-    ropsten: {
-      url: 'https://eth-ropsten.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
-      accounts: {
-        mnemonic: process.env.MNEMONIC as string,
-      },
-      gasPrice: 65 * GWEI, // Para testnets apenas <!>
-    },
-    kovan: {
-      url: 'https://eth-kovan.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
-      accounts: {
-        mnemonic: process.env.MNEMONIC as string,
-      },
-      gasPrice: 65 * GWEI, // Para testnets apenas <!>
+      live: false,
+      tags: ['test', 'local'],
+      chainId: 1337,
+      deploy: ['deploy'],
     },
     goerli: {
       url: 'https://eth-goerli.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
-      gasPrice: 65 * GWEI, // Para testnets apenas <!>
+      saveDeployments: true,
+      gasPrice: 65 * GWEI,
+      deploy: ['deploy'],
+      live: true,
     },
     arbitrumRinkeby: {
       url: 'https://arb-rinkeby.g.alchemy.com/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
-    },
-    emeraldTestnet: {
-      url: 'https://testnet.emerald.oasis.dev',
-      accounts: {
-        mnemonic: process.env.MNEMONIC as string,
-      },
+      saveDeployments: true,
+      deploy: ['deploy'],
+      live: true,
     },
     mumbai: {
-      url: 'https://polygon-mumbai.g.alchemy.com/v2/' + process.env.ALCHEMY_MUMBAI_APP,
+      url: 'https://polygon-mumbai.g.alchemy.com/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
+      saveDeployments: true,
       gasPrice: 1100000000,
-    },
-    hardhat: {
-      // gasPrice: 0,
-      // hardfork: "berlin",
-      // forking: {
-      //   url: "https://mainnet.infura.io/v3/" + process.env.INFURA_TOKEN,
-      // },
+      deploy: ['deploy'],
+      live: true,
     },
     hardhatevm: {
       hardfork: 'berlin',
       blockGasLimit: 9500000,
       gas: 9500000,
       gasPrice: 8000000000,
-      chainId: 31337,
+      chainId: 1337,
       throwOnTransactionFailures: true,
       throwOnCallFailures: true,
       url: 'http://localhost:8545',
@@ -84,7 +69,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.15',
+        version: '0.8.16',
         settings: {
           optimizer: {
             enabled: true,
@@ -103,17 +88,30 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: process.env.ETHERSCAN_TOKEN,
   },
+  namedAccounts: {
+    deployer: 0,
+    staker1: 1,
+    staker2: 2,
+    staker3: 3,
+    hacker: 4,
+    tester5: 5,
+    tester6: 6,
+    tester7: 7,
+    tester8: 8,
+    tester9: 9,
+  },
   mocha: {
     timeout: 100000,
   },
+  paths: {
+    artifacts: 'artifacts',
+    cache: 'cache',
+    deploy: 'deploy',
+    deployments: 'deployments',
+    imports: 'imports',
+    sources: 'contracts',
+    tests: 'test',
+  },
 };
-
-task('accounts', 'Prints the list of accounts', async (args, hre) => {
-  const accounts = await hre.ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(await account.address);
-  }
-});
 
 export default config;

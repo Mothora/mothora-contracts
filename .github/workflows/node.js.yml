@@ -23,8 +23,8 @@ jobs:
           cache: 'yarn'
       - name: Install dependencies
         run: yarn install
-      - name: Run Game Mock Tests
-        run: yarn test:mock
+      - name: Run Game Tests
+        run: yarn test
         env:
           MNEMONIC: ${{ secrets.MNEMONIC }}
           ALCHEMY_TOKEN: ${{ secrets.ALCHEMY_TOKEN }}
