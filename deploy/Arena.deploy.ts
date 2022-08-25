@@ -6,7 +6,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy, execute, read } = deployments;
   const { deployer } = await getNamedAccounts();
-  const subscriptionId = 4948;
+  const subscriptionId = 1498;
+
   await deploy('Arena', {
     from: deployer,
     log: true,
@@ -15,5 +16,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await execute('MothoraGame', { from: deployer, log: true }, 'setArena', (await deployments.get('Arena')).address);
 };
 export default func;
-func.tags = ['Arena'];
+func.tags = ['Arena', 'Main'];
 func.dependencies = ['MothoraGame'];

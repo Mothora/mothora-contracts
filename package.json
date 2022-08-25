@@ -7,7 +7,9 @@
     "test": "hardhat compile && hardhat test ./test/*.test.ts",
     "node:hardhatevm": "hardhat node",
     "compile": "hardhat compile",
-    "coverage": "hardhat coverage --testfiles 'test/*.test.ts'"
+    "coverage": "hardhat coverage --testfiles 'test/*.test.ts'",
+    "airdrop": "hardhat run --network mumbai scripts/airdrop.ts",
+    "rewards": "hardhat run --network mumbai scripts/distributeRewards.ts"
   },
   "keywords": [
     "hardhat",
@@ -24,6 +26,7 @@
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
     "@openzeppelin/hardhat-upgrades": "^1.20.0",
+    "@pinata/sdk": "^1.1.26",
     "@primitivefi/hardhat-marmite": "0.0.4",
     "@typechain/ethers-v5": "^10.1.0",
     "@typechain/hardhat": "^6.1.2",
@@ -48,6 +51,7 @@
     "hardhat-deploy": "^0.11.12",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",
     "hardhat-gas-reporter": "^1.0.8",
+    "multiformats": "^9.7.1",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.24",
     "solhint": "^3.3.7",

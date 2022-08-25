@@ -16,5 +16,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await execute('MothoraGame', { from: deployer, log: true }, 'setEssence', (await deployments.get('Essence')).address);
 };
 export default func;
-func.tags = ['Essence', 'Test'];
+func.tags = ['Essence', 'Main', 'Test'];
 func.dependencies = ['MothoraGame'];
