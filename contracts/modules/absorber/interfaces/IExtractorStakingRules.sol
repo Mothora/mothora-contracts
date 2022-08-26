@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
 import "./IStakingRules.sol";
 
@@ -11,7 +11,17 @@ interface IExtractorStakingRules is IStakingRules {
     /// @return user wallet address that staked replaced NFT
     /// @return replacedTokenId tokenId of replaced NFT
     /// @return replacedAmount amount of replaced NFT, must be 1 for ERC721
-    function canReplace(address _user, address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
+    function canReplace(
+        address _user,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _amount,
+        uint256 _replacedSpotId
+    )
         external
-        returns (address user, uint256 replacedTokenId, uint256 replacedAmount);
+        returns (
+            address user,
+            uint256 replacedTokenId,
+            uint256 replacedAmount
+        );
 }

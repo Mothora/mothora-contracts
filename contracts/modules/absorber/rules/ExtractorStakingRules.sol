@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-import '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
+import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import "../interfaces/IExtractorStakingRules.sol";
 
@@ -33,11 +33,11 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
     /// @dev maps spot Id to ExtractorData
     mapping(uint256 => ExtractorData) public stakedExtractor;
 
-    /// @dev maps token Id => boost value
-    mapping(uint256 => uint256) public extractorBoost;
+    /// @dev maps token Id => power value
+    mapping(uint256 => uint256) public extractorPower;
 
     event MaxStakeable(uint256 maxStakeable);
-    event ExtractorBoost(uint256 tokenId, uint256 boost);
+    event ExtractorPower(uint256 tokenId, uint256 power);
     event ExtractorStaked(address user, uint256 tokenId, uint256 spotId, uint256 amount);
     event ExtractorReplaced(address user, uint256 tokenId, uint256 replacedSpotId);
     event Lifetime(uint256 lifetime);
@@ -47,8 +47,8 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
     error ZeroAmount();
     error MustReplaceOne();
     error InvalidSpotId();
-    error MustReplaceWithHigherBoost();
-    error ZeroBoost();
+    error MustReplaceWithHigherPower();
+    error ZeroPower();
     error MaxStakeableReached();
     error CannotUnstake();
     error TooManyStakeableSpots();
@@ -62,21 +62,26 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
 
     function init(
         address _admin,
-        address _harvesterFactory,
+        address _absorberFactory,
         address _extractorAddress,
         uint256 _maxStakeable,
         uint256 _lifetime
     ) external initializer {
         __ERC165_init();
 
-        _initStakingRulesBase(_admin, _harvesterFactory);
+        _initStakingRulesBase(_admin, _absorberFactory);
 
         _setExtractorAddress(_extractorAddress);
         _setMaxStakeable(_maxStakeable);
         _setExtractorLifetime(_lifetime);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC165Upgradeable, AccessControlEnumerableUpgradeable) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC165Upgradeable, AccessControlEnumerableUpgradeable)
+        returns (bool)
+    {
         return
             interfaceId == type(IExtractorStakingRules).interfaceId ||
             interfaceId == type(IERC165Upgradeable).interfaceId ||
@@ -101,32 +106,47 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
         }
     }
 
-    /// @return totalBoost boost sum of all active extractors
-    function getExtractorsTotalBoost() public view returns (uint256 totalBoost) {
+    /// @return totalPower power sum of all active extractors
+    function getExtractorsTotalPower() public view returns (uint256 totalPower) {
         for (uint256 i = 0; i < extractorCount.current(); i++) {
             if (isExtractorActive(i)) {
-                totalBoost += extractorBoost[stakedExtractor[i].tokenId];
+                totalPower += extractorPower[stakedExtractor[i].tokenId];
             }
         }
     }
 
     /// @inheritdoc IStakingRules
-    function getUserBoost(address, address, uint256, uint256) external pure override returns (uint256) {
+    function getUserPower(
+        address,
+        address,
+        uint256,
+        uint256
+    ) external pure override returns (uint256) {
         return 0;
     }
 
     /// @inheritdoc IStakingRules
-    function getHarvesterBoost() external view returns (uint256) {
-        return Constant.ONE + getExtractorsTotalBoost();
+    function getAbsorberPower() external view returns (uint256) {
+        return Constant.ONE + getExtractorsTotalPower();
     }
 
     /// @inheritdoc IExtractorStakingRules
-    function canReplace(address _user, address _nft, uint256 _tokenId, uint256 _amount, uint256 _replacedSpotId)
+    function canReplace(
+        address _user,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _amount,
+        uint256 _replacedSpotId
+    )
         external
         override
         onlyRole(SR_NFT_HANDLER)
         validateInput(_nft, _amount)
-        returns (address user, uint256 replacedTokenId, uint256 replacedAmount)
+        returns (
+            address user,
+            uint256 replacedTokenId,
+            uint256 replacedAmount
+        )
     {
         if (_amount != 1) revert MustReplaceOne();
         if (_replacedSpotId >= maxStakeable) revert InvalidSpotId();
@@ -136,21 +156,22 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
         replacedAmount = _amount;
 
         if (isExtractorActive(_replacedSpotId)) {
-            uint256 oldBoost = extractorBoost[replacedTokenId];
-            uint256 newBoost = extractorBoost[_tokenId];
-            if (oldBoost >= newBoost) revert MustReplaceWithHigherBoost();
+            uint256 oldPower = extractorPower[replacedTokenId];
+            uint256 newPower = extractorPower[_tokenId];
+            if (oldPower >= newPower) revert MustReplaceWithHigherPower();
         }
 
         stakedExtractor[_replacedSpotId] = ExtractorData(_user, _tokenId, block.timestamp);
         emit ExtractorReplaced(_user, _tokenId, _replacedSpotId);
     }
 
-    function _processStake(address _user, address _nft, uint256 _tokenId, uint256 _amount)
-        internal
-        override
-        validateInput(_nft, _amount)
-    {
-        if (extractorBoost[_tokenId] == 0) revert ZeroBoost();
+    function _processStake(
+        address _user,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _amount
+    ) internal override validateInput(_nft, _amount) {
+        if (extractorPower[_tokenId] == 0) revert ZeroPower();
         if (extractorCount.current() + _amount > maxStakeable) revert MaxStakeableReached();
 
         uint256 spotId;
@@ -165,7 +186,12 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
         emit ExtractorStaked(_user, _tokenId, spotId, _amount);
     }
 
-    function _processUnstake(address, address, uint256, uint256) internal pure override {
+    function _processUnstake(
+        address,
+        address,
+        uint256,
+        uint256
+    ) internal pure override {
         revert CannotUnstake();
     }
 
@@ -175,15 +201,15 @@ contract ExtractorStakingRules is IExtractorStakingRules, ERC165Upgradeable, Sta
         _setMaxStakeable(_maxStakeable);
     }
 
-    function setExtractorBoost(uint256 _tokenId, uint256 _boost) external onlyRole(SR_ADMIN) {
-        nftHandler.harvester().callUpdateRewards();
+    function setExtractorPower(uint256 _tokenId, uint256 _power) external onlyRole(SR_ADMIN) {
+        nftHandler.absorber().callUpdateRewards();
 
-        extractorBoost[_tokenId] = _boost;
-        emit ExtractorBoost(_tokenId, _boost);
+        extractorPower[_tokenId] = _power;
+        emit ExtractorPower(_tokenId, _power);
     }
 
     function setExtractorLifetime(uint256 _lifetime) external onlyRole(SR_ADMIN) {
-        nftHandler.harvester().callUpdateRewards();
+        nftHandler.absorber().callUpdateRewards();
 
         _setExtractorLifetime(_lifetime);
     }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./interfaces/IAbsorberFactory.sol";
 import "./interfaces/IAbsorber.sol";
-import "../interfaces/IEssenceField.sol";
+import "../../interfaces/IEssenceField.sol";
 
 import "./lib/Constant.sol";
 
@@ -35,14 +35,14 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
 
     mapping(address => RewardsBalance) public rewardsBalance;
 
-    uint256[][] public corruptionNegativeBoostMatrix;
+    uint256[][] public corruptionNegativePowerMatrix;
 
     event RewardsPaid(address indexed stream, uint256 rewardsPaid, uint256 rewardsPaidInTotal);
     event CorruptionToken(IERC20 corruptionToken);
     event AbsorberFactory(IAbsorberFactory absorberFactory);
     event EssenceField(IEssenceField essenceField);
-    event CorruptionNegativeBoostMatrix(uint256[][] _corruptionNegativeBoostMatrix);
-    event AtlasMineBoost(uint256 atlasMineBoost);
+    event CorruptionNegativePowerMatrix(uint256[][] _corruptionNegativePowerMatrix);
+    event AtlasMinePower(uint256 atlasMinePower);
 
     modifier runIfNeeded() {
         if (block.timestamp > lastRewardTimestamp) {
@@ -74,7 +74,7 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
         corruptionToken = _corruptionToken;
         emit CorruptionToken(_corruptionToken);
 
-        corruptionNegativeBoostMatrix = [
+        corruptionNegativePowerMatrix = [
             [600_000e18, 0.4e18],
             [500_000e18, 0.5e18],
             [400_000e18, 0.6e18],
@@ -82,7 +82,7 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
             [200_000e18, 0.8e18],
             [100_000e18, 0.9e18]
         ];
-        emit CorruptionNegativeBoostMatrix(corruptionNegativeBoostMatrix);
+        emit CorruptionNegativePowerMatrix(corruptionNegativePowerMatrix);
     }
 
     /// @dev Returns share in mining power for all absorbers. To get percentage of mining power
@@ -114,7 +114,7 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
 
         for (uint256 i = 0; i < allActiveAbsorbers.length; i++) {
             allActiveAbsorbers[i] = absorbers[i];
-            absorberShare[i] = getAbsorberEmissionsBoost(allActiveAbsorbers[i]);
+            absorberShare[i] = getAbsorberEmissionsPower(allActiveAbsorbers[i]);
             totalShare += absorberShare[i];
 
             if (allActiveAbsorbers[i] == _targetAbsorber) {
@@ -137,54 +137,54 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
         return unpaidRewards + (pendingRewards * absorberShare[targetIndex]) / totalShare;
     }
 
-    function getAbsorberEmissionsBoost(address _absorber) public view returns (uint256) {
-        uint256 absorberTotalBoost = IAbsorber(_absorber).nftHandler().getAbsorberTotalBoost();
-        uint256 utilBoost = getUtilizationBoost(_absorber);
-        uint256 corruptionNegativeBoost = getCorruptionNegativeBoost(_absorber);
+    function getAbsorberEmissionsPower(address _absorber) public view returns (uint256) {
+        uint256 absorberTotalPower = IAbsorber(_absorber).nftHandler().getAbsorberTotalPower();
+        uint256 utilPower = getUtilizationPower(_absorber);
+        uint256 corruptionNegativePower = getCorruptionNegativePower(_absorber);
 
-        return (((absorberTotalBoost * utilBoost) / Constant.ONE) * corruptionNegativeBoost) / Constant.ONE;
+        return (((absorberTotalPower * utilPower) / Constant.ONE) * corruptionNegativePower) / Constant.ONE;
     }
 
-    function getCorruptionNegativeBoost(address _absorber) public view returns (uint256 negBoost) {
-        negBoost = Constant.ONE;
+    function getCorruptionNegativePower(address _absorber) public view returns (uint256 negPower) {
+        negPower = Constant.ONE;
 
         uint256 balance = corruptionToken.balanceOf(_absorber);
 
-        for (uint256 i = 0; i < corruptionNegativeBoostMatrix.length; i++) {
-            uint256 balanceThreshold = corruptionNegativeBoostMatrix[i][0];
+        for (uint256 i = 0; i < corruptionNegativePowerMatrix.length; i++) {
+            uint256 balanceThreshold = corruptionNegativePowerMatrix[i][0];
 
             if (balance > balanceThreshold) {
-                negBoost = corruptionNegativeBoostMatrix[i][1];
+                negPower = corruptionNegativePowerMatrix[i][1];
                 break;
             }
         }
     }
 
     /// @dev this is the old getRealEssenceReward
-    function getUtilizationBoost(address _absorber) public view returns (uint256 utilBoost) {
+    function getUtilizationPower(address _absorber) public view returns (uint256 utilPower) {
         uint256 util = getUtilization(_absorber);
 
         if (util < 0.3e18) {
             // if utilization < 30%, no emissions
-            utilBoost = 0;
+            utilPower = 0;
         } else if (util < 0.4e18) {
             // if 30% < utilization < 40%, 50% emissions
-            utilBoost = 0.5e18;
+            utilPower = 0.5e18;
         } else if (util < 0.5e18) {
             // if 40% < utilization < 50%, 60% emissions
-            utilBoost = 0.6e18;
+            utilPower = 0.6e18;
         } else if (util < 0.6e18) {
             // if 50% < utilization < 60%, 70% emissions
-            utilBoost = 0.7e18;
+            utilPower = 0.7e18;
         } else if (util < 0.7e18) {
             // if 60% < utilization < 70%, 80% emissions
-            utilBoost = 0.8e18;
+            utilPower = 0.8e18;
         } else if (util < 0.8e18) {
             // if 70% < utilization < 80%, 90% emissions
-            utilBoost = 0.9e18;
+            utilPower = 0.9e18;
         } else {
             // 100% emissions above 80% utilization
-            utilBoost = 1e18;
+            utilPower = 1e18;
         }
     }
 
@@ -197,8 +197,8 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
         }
     }
 
-    function getCorruptionNegativeBoostMatrix() public view returns (uint256[][] memory) {
-        return corruptionNegativeBoostMatrix;
+    function getCorruptionNegativePowerMatrix() public view returns (uint256[][] memory) {
+        return corruptionNegativePowerMatrix;
     }
 
     function distributeRewards() public runIfNeeded {
@@ -245,11 +245,11 @@ contract EssencePipeline is AccessControlEnumerableUpgradeable {
         emit EssenceField(_essenceField);
     }
 
-    function setCorruptionNegativeBoostMatrix(uint256[][] memory _corruptionNegativeBoostMatrix)
+    function setCorruptionNegativePowerMatrix(uint256[][] memory _corruptionNegativePowerMatrix)
         external
         onlyRole(ESSENCE_PIPELINE_ADMIN)
     {
-        corruptionNegativeBoostMatrix = _corruptionNegativeBoostMatrix;
-        emit CorruptionNegativeBoostMatrix(_corruptionNegativeBoostMatrix);
+        corruptionNegativePowerMatrix = _corruptionNegativePowerMatrix;
+        emit CorruptionNegativePowerMatrix(_corruptionNegativePowerMatrix);
     }
 }

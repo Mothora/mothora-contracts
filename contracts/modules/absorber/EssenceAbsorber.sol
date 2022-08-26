@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -90,7 +90,7 @@ contract Absorber is IAbsorber, Initializable, AccessControlEnumerableUpgradeabl
     modifier updateRewards() {
         uint256 epSupply = totalEpToken;
         if (epSupply > 0) {
-            uint256 distributedRewards = factory.middleman().requestRewards();
+            uint256 distributedRewards = factory.essencePipeline().requestRewards();
             if (distributedRewards > 0) {
                 totalRewardsEarned += distributedRewards;
                 accEssencePerShare += (distributedRewards * ONE) / epSupply;
@@ -234,7 +234,7 @@ contract Absorber is IAbsorber, Initializable, AccessControlEnumerableUpgradeabl
         uint256 epSupply = totalEpToken;
 
         if (epSupply > 0) {
-            uint256 pendingRewards = factory.middleman().getPendingRewards(address(this));
+            uint256 pendingRewards = factory.essencePipeline().getPendingRewards(address(this));
             _accEssencePerShare += (pendingRewards * ONE) / epSupply;
         }
 

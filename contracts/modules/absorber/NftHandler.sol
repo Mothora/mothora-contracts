@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -54,8 +54,8 @@ contract NftHandler is
     /// @dev user => NFT address => tokenId => amount
     mapping(address => mapping(address => mapping(uint256 => uint256))) public stakedNfts;
 
-    // user => boost
-    mapping(address => uint256) public getUserBoost;
+    // user => Power
+    mapping(address => uint256) public getUserPower;
 
     event Staked(address indexed user, address indexed nft, uint256 tokenId, uint256 amount);
     event Unstaked(address indexed user, address indexed nft, uint256 tokenId, uint256 amount);
@@ -181,27 +181,27 @@ contract NftHandler is
         }
     }
 
-    function getNftBoost(
+    function getNftPower(
         address _user,
         address _nft,
         uint256 _tokenId,
         uint256 _amount
-    ) public view returns (uint256 boost) {
+    ) public view returns (uint256 Power) {
         IStakingRules stakingRules = getStakingRules(_nft, _tokenId);
 
         if (address(stakingRules) != address(0)) {
-            boost = stakingRules.getUserBoost(_user, _nft, _tokenId, _amount);
+            Power = stakingRules.getUserPower(_user, _nft, _tokenId, _amount);
         }
     }
 
-    function getAbsorberTotalBoost() public view returns (uint256 boost) {
-        boost = Constant.ONE;
+    function getAbsorberTotalPower() public view returns (uint256 Power) {
+        Power = Constant.ONE;
 
         for (uint256 i = 0; i < allStakingRules.length(); i++) {
             IStakingRules stakingRules = IStakingRules(allStakingRules.at(i));
 
             if (address(stakingRules) != address(0)) {
-                boost = (boost * stakingRules.getAbsorberBoost()) / Constant.ONE;
+                Power = (Power * stakingRules.getAbsorberPower()) / Constant.ONE;
             }
         }
     }
@@ -226,8 +226,8 @@ contract NftHandler is
 
         stakedNfts[msg.sender][_nft][_tokenId] += _amount;
 
-        getUserBoost[msg.sender] += getNftBoost(msg.sender, _nft, _tokenId, _amount);
-        absorber.updateNftBoost(msg.sender);
+        getUserPower[msg.sender] += getNftPower(msg.sender, _nft, _tokenId, _amount);
+        absorber.updateNftPower(msg.sender);
 
         emit Staked(msg.sender, _nft, _tokenId, _amount);
     }
@@ -279,8 +279,8 @@ contract NftHandler is
         if (_amount > staked) revert AmountTooBig();
         stakedNfts[msg.sender][_nft][_tokenId] = staked - _amount;
 
-        getUserBoost[msg.sender] -= getNftBoost(msg.sender, _nft, _tokenId, _amount);
-        absorber.updateNftBoost(msg.sender);
+        getUserPower[msg.sender] -= getNftPower(msg.sender, _nft, _tokenId, _amount);
+        absorber.updateNftPower(msg.sender);
 
         emit Unstaked(msg.sender, _nft, _tokenId, _amount);
     }

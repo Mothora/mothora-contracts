@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
-import '../interfaces/INftHandler.sol';
+import "../interfaces/INftHandler.sol";
 
 import "./StakingRulesBase.sol";
 
@@ -9,13 +9,13 @@ contract PartsStakingRules is StakingRulesBase {
     uint256 public staked;
     uint256 public maxStakeableTotal;
     uint256 public maxStakeablePerUser;
-    uint256 public boostFactor;
+    uint256 public powerFactor;
 
     mapping(address => uint256) public getAmountStaked;
 
     event MaxStakeableTotal(uint256 maxStakeableTotal);
     event MaxStakeablePerUser(uint256 maxStakeablePerUser);
-    event BoostFactor(uint256 boostFactor);
+    event PowerFactor(uint256 powerFactor);
 
     error ZeroAddress();
     error ZeroAmount();
@@ -32,47 +32,53 @@ contract PartsStakingRules is StakingRulesBase {
 
     function init(
         address _admin,
-        address _harvesterFactory,
+        address _absorberFactory,
         uint256 _maxStakeableTotal,
         uint256 _maxStakeablePerUser,
-        uint256 _boostFactor
+        uint256 _powerFactor
     ) external initializer {
-        _initStakingRulesBase(_admin, _harvesterFactory);
+        _initStakingRulesBase(_admin, _absorberFactory);
 
         _setMaxStakeableTotal(_maxStakeableTotal);
         _setMaxStakeablePerUser(_maxStakeablePerUser);
-        _setBoostFactor(_boostFactor);
+        _setPowerFactor(_powerFactor);
     }
 
     /// @inheritdoc IStakingRules
-    function getUserBoost(address, address, uint256, uint256) external pure override returns (uint256) {
+    function getUserPower(
+        address,
+        address,
+        uint256,
+        uint256
+    ) external pure override returns (uint256) {
         return 0;
     }
 
     /// @inheritdoc IStakingRules
-    function getHarvesterBoost() external view returns (uint256) {
-        // quadratic function in the interval: [1, (1 + boost_factor)] based on number of parts staked.
-        // exhibits diminishing returns on boosts as more parts are added
-        // num_parts: number of harvester parts
-        // max_parts: number of parts to achieve max boost
-        // boost_factor: the amount of boost you want to apply to parts
-        // default is 1 = 100% boost (2x) if num_parts = max_parts
+    function getAbsorberPower() external view returns (uint256) {
+        // quadratic function in the interval: [1, (1 + power_factor)] based on number of parts staked.
+        // exhibits diminishing returns on powers as more parts are added
+        // num_parts: number of absorber parts
+        // max_parts: number of parts to achieve max power
+        // power_factor: the amount of power you want to apply to parts
+        // default is 1 = 100% power (2x) if num_parts = max_parts
         // # weight for additional parts has  diminishing gains
         // n = num_parts
-        // return 1 + (2*n - n**2/max_parts) / max_parts * boost_factor
+        // return 1 + (2*n - n**2/max_parts) / max_parts * power_factor
 
         uint256 n = staked * Constant.ONE;
         uint256 maxParts = maxStakeableTotal * Constant.ONE;
         if (maxParts == 0) return Constant.ONE;
-        uint256 boost = boostFactor;
-        return Constant.ONE + (2 * n - n ** 2 / maxParts) * boost / maxParts;
+        uint256 power = powerFactor;
+        return Constant.ONE + ((2 * n - n**2 / maxParts) * power) / maxParts;
     }
 
-    function _processStake(address _user, address, uint256, uint256 _amount)
-        internal
-        override
-        validateInput(_user, _amount)
-    {
+    function _processStake(
+        address _user,
+        address,
+        uint256,
+        uint256 _amount
+    ) internal override validateInput(_user, _amount) {
         uint256 stakedCache = staked;
         if (stakedCache + _amount > maxStakeableTotal) revert MaxStakeable();
         staked = stakedCache + _amount;
@@ -82,16 +88,17 @@ contract PartsStakingRules is StakingRulesBase {
         getAmountStaked[_user] = amountStakedCache + _amount;
     }
 
-    function _processUnstake(address _user, address, uint256, uint256 _amount)
-        internal
-        override
-        validateInput(_user, _amount)
-    {
+    function _processUnstake(
+        address _user,
+        address,
+        uint256,
+        uint256 _amount
+    ) internal override validateInput(_user, _amount) {
         staked -= _amount;
         getAmountStaked[_user] -= _amount;
 
         // require that user cap is above MAGIC deposit amount after unstake
-        if (INftHandler(msg.sender).harvester().isUserExceedingDepositCap(_user)) {
+        if (INftHandler(msg.sender).absorber().isUserExceedingDepositCap(_user)) {
             revert MinUserGlobalDeposit();
         }
     }
@@ -106,10 +113,10 @@ contract PartsStakingRules is StakingRulesBase {
         _setMaxStakeablePerUser(_maxStakeablePerUser);
     }
 
-    function setBoostFactor(uint256 _boostFactor) external onlyRole(SR_ADMIN) {
-        nftHandler.harvester().callUpdateRewards();
+    function setPowerFactor(uint256 _powerFactor) external onlyRole(SR_ADMIN) {
+        nftHandler.absorber().callUpdateRewards();
 
-        _setBoostFactor(_boostFactor);
+        _setPowerFactor(_powerFactor);
     }
 
     function _setMaxStakeableTotal(uint256 _maxStakeableTotal) internal {
@@ -122,8 +129,8 @@ contract PartsStakingRules is StakingRulesBase {
         emit MaxStakeablePerUser(_maxStakeablePerUser);
     }
 
-    function _setBoostFactor(uint256 _boostFactor) internal {
-        boostFactor = _boostFactor;
-        emit BoostFactor(_boostFactor);
+    function _setPowerFactor(uint256 _powerFactor) internal {
+        powerFactor = _powerFactor;
+        emit PowerFactor(_powerFactor);
     }
 }

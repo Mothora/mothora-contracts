@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.14;
+pragma solidity 0.8.16;
 
 import "./INftHandler.sol";
 
-interface IHarvester {
+interface IAbsorber {
     struct UserInfo {
         uint256 originalDepositAmount;
         uint256 depositAmount;
-        uint256 lockLpAmount;
+        uint256 lockEpAmount;
         uint256 lockedUntil;
         uint256 lock;
     }
@@ -20,26 +20,39 @@ interface IHarvester {
 
     struct GlobalUserDeposit {
         uint256 globalDepositAmount;
-        uint256 globalLockLpAmount;
-        uint256 globalLpAmount;
+        uint256 globalLockEpAmount;
+        uint256 globalEpAmount;
         int256 globalRewardDebt;
     }
 
     struct Timelock {
-        uint256 boost;
+        uint256 power;
         uint256 timelock;
         uint256 vesting;
         bool enabled;
     }
 
-    function init(address _admin, INftHandler _nftHandler, CapConfig memory _depositCapPerWallet) external;
+    function init(
+        address _admin,
+        INftHandler _nftHandler,
+        CapConfig memory _depositCapPerWallet
+    ) external;
+
     function disabled() external view returns (bool);
+
     function enable() external;
+
     function disable() external;
+
     function callUpdateRewards() external returns (bool);
+
     function isUserExceedingDepositCap(address _user) external view returns (bool);
-    function updateNftBoost(address user) external returns (bool);
+
+    function updateNftPower(address user) external returns (bool);
+
     function nftHandler() external view returns (INftHandler);
-    function magicTotalDeposits() external view returns (uint256);
+
+    function essenceTotalDeposits() external view returns (uint256);
+
     function totalDepositCap() external view returns (uint256);
 }
