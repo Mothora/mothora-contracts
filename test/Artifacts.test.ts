@@ -1,6 +1,6 @@
 import hre from 'hardhat';
 import { expect } from 'chai';
-import { Arena, Artifacts, Cosmetics, Essence, EssenceAbsorber, MothoraGame } from '../typechain-types';
+import { Arena, Artifacts, Cosmetics, Essence, MothoraGame } from '../typechain-types';
 
 const { ethers, deployments, getNamedAccounts } = hre;
 const { deploy } = deployments;
@@ -10,7 +10,6 @@ describe.only('Artifacts', () => {
   let arena: Arena;
   let artifacts: Artifacts;
   let cosmetics: Cosmetics;
-  let essenceAbsorber: EssenceAbsorber;
   let essence: Essence;
   let tester1: any,
     tester2: any,

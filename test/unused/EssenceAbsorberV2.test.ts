@@ -1,6 +1,6 @@
 import hre from 'hardhat';
 import { expect } from 'chai';
-import { getBlockTime, mineBlock, getCurrentTime, setNextBlockTime } from './utils';
+import { getBlockTime, mineBlock, getCurrentTime, setNextBlockTime } from '../utils';
 import { deployMockContract } from 'ethereum-waffle';
 
 const { ethers, deployments, getNamedAccounts, artifacts } = hre;

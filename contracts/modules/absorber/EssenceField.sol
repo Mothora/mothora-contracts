@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "../interfaces/IEssenceField.sol";
-import "../interfaces/IFlow.sol";
+import "./interfaces/IEssenceField.sol";
+import "./interfaces/IFlow.sol";
 
 /// wallet controlled by trusted team members. Admin role aka ESSENCE_FIELD_CREATOR_ROLE, as initialized during init()
 /// to msg.sender can:
@@ -21,10 +21,11 @@ import "../interfaces/IFlow.sol";
 /// • Enable/Disable registered flow addresses as callbacks, by calling setCallback().
 /// • Withdraw an arbitrary essence token amount to an arbitrary address, by calling withdrawEssence().
 /// • Set the essence token address to an arbitrary address, by calling setEssenceToken().
-contract EssenceFieldV1 is IEssenceField, Initializable, AccessControlEnumerableUpgradeable {
+contract EssenceField is IEssenceField, Initializable, AccessControlEnumerableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint256 public constant PRECISION = 1e18;
     bytes32 public constant ESSENCE_FIELD_CREATOR_ROLE = keccak256("ESSENCE_FIELD_CREATOR_ROLE");
 
     IERC20Upgradeable public essence;
@@ -185,7 +186,7 @@ contract EssenceFieldV1 is IEssenceField, Initializable, AccessControlEnumerable
                 startTimestamp: _startTimestamp,
                 endTimestamp: _endTimestamp,
                 lastRewardTimestamp: _startTimestamp,
-                ratePerSecond: _totalRewards / (_endTimestamp - _startTimestamp),
+                ratePerSecond: (_totalRewards * PRECISION) / (_endTimestamp - _startTimestamp) / PRECISION,
                 paid: 0
             });
             emit FlowAdded(_flow, _totalRewards, _startTimestamp, _endTimestamp);
@@ -217,11 +218,11 @@ contract EssenceFieldV1 is IEssenceField, Initializable, AccessControlEnumerable
         EssenceFlow storage flow = flowConfig[_flow];
 
         uint256 secondsToEnd = flow.endTimestamp - flow.lastRewardTimestamp;
-        uint256 rewardsLeft = secondsToEnd * flow.ratePerSecond;
+        uint256 rewardsLeft = flow.totalRewards - flow.paid;
 
         require(_amount <= rewardsLeft, "Reduce amount too large, rewards already paid");
 
-        flow.ratePerSecond = (rewardsLeft - _amount) / secondsToEnd;
+        flow.ratePerSecond = ((rewardsLeft - _amount) * PRECISION) / secondsToEnd / PRECISION;
         flow.totalRewards -= _amount;
 
         emit FlowDefunded(_flow, _amount);
@@ -248,7 +249,10 @@ contract EssenceFieldV1 is IEssenceField, Initializable, AccessControlEnumerable
             flow.endTimestamp = _endTimestamp;
         }
 
-        flow.ratePerSecond = (flow.totalRewards - flow.paid) / (flow.endTimestamp - flow.lastRewardTimestamp);
+        flow.ratePerSecond =
+            ((flow.totalRewards - flow.paid) * PRECISION) /
+            (flow.endTimestamp - flow.lastRewardTimestamp) /
+            PRECISION;
 
         emit FlowTimeUpdated(_flow, _startTimestamp, _endTimestamp);
     }

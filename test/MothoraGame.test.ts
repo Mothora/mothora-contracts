@@ -1,6 +1,6 @@
 import hre from 'hardhat';
 import { expect } from 'chai';
-import { MockArena, Artifacts, Cosmetics, Essence, EssenceAbsorber, MothoraGame } from '../typechain-types';
+import { MockArena, Artifacts, Cosmetics, Essence, MothoraGame } from '../typechain-types';
 
 const { ethers, deployments, getNamedAccounts } = hre;
 
@@ -9,7 +9,6 @@ describe.only('MothoraGame', () => {
   let arena: MockArena;
   let artifacts: Artifacts;
   let cosmetics: Cosmetics;
-  let essenceAbsorber: EssenceAbsorber;
   let essence: Essence;
   let tester1: any, deployer: any;
   let tester1Signer: any, deployerSigner: any;
@@ -41,12 +40,14 @@ describe.only('MothoraGame', () => {
       const Essence = await deployments.get('Essence');
       essence = new ethers.Contract(Essence.address, Essence.abi, deployerSigner) as Essence;
 
+      /*
       const EssenceAbsorber = await deployments.get('EssenceAbsorber');
       essenceAbsorber = new ethers.Contract(
         EssenceAbsorber.address,
         EssenceAbsorber.abi,
         deployerSigner
       ) as EssenceAbsorber;
+      */
     });
 
     describe('Tests that evaluate account creation', async () => {
@@ -107,10 +108,6 @@ describe.only('MothoraGame', () => {
 
       it('It correctly gets the Essence Contract Address', async () => {
         expect(await mothoraGame.connect(deployerSigner).getEssence()).to.be.equal(essence.address);
-      });
-
-      it('It correctly gets the Essence Absorber Contract Address', async () => {
-        expect(await mothoraGame.connect(deployerSigner).getEssenceAbsorber()).to.be.equal(essenceAbsorber.address);
       });
     });
   });

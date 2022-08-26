@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./interfaces/IAbsorberFactory.sol";
 import "./interfaces/IAbsorber.sol";
-import "../../interfaces/IEssenceField.sol";
+import "./interfaces/IEssenceField.sol";
 
 import "./lib/Constant.sol";
 
