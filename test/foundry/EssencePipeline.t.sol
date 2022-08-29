@@ -281,6 +281,7 @@ contract EssencePipelineTest is TestUtils {
 
         setupDistributeRewards(rewards);
 
+        // rewards are distributed for the first time
         essencePipeline.distributeRewards();
 
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[0]);
@@ -290,7 +291,7 @@ contract EssencePipelineTest is TestUtils {
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[2]);
         assertEq(unpaid, 2500);
 
-        // time has not moved, therefore runIfNeeded is not triggered (unpaid is the same)
+        // time has not moved, therefore runIfNeeded is not triggered and no rewards are distributed
         essencePipeline.distributeRewards();
 
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[0]);
@@ -300,7 +301,7 @@ contract EssencePipelineTest is TestUtils {
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[2]);
         assertEq(unpaid, 2500);
 
-        // time has moved, runIfNeeded is triggered, mocked 5000 rewards is redistributed
+        // time has moved, runIfNeeded is triggered, another 5000 rewards is redistributed
         // according to the shares
         vm.warp(block.timestamp + 1);
         essencePipeline.distributeRewards();
