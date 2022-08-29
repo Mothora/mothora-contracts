@@ -290,8 +290,7 @@ contract EssencePipelineTest is TestUtils {
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[2]);
         assertEq(unpaid, 2500);
 
-        vm.prank(admin);
-
+        // time has not moved, therefore runIfNeeded is not triggered (unpaid is the same)
         essencePipeline.distributeRewards();
 
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[0]);
@@ -301,15 +300,17 @@ contract EssencePipelineTest is TestUtils {
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[2]);
         assertEq(unpaid, 2500);
 
+        // time has moved, runIfNeeded is triggered, mocked 5000 rewards is redistributed
+        // according to the shares
         vm.warp(block.timestamp + 1);
         essencePipeline.distributeRewards();
 
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[0]);
-        assertEq(unpaid, 3750);
+        assertEq(unpaid, 2500);
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[1]);
-        assertEq(unpaid, 3750);
+        assertEq(unpaid, 2500);
         (unpaid, ) = essencePipeline.rewardsBalance(allAbsorbers[2]);
-        assertEq(unpaid, 7500);
+        assertEq(unpaid, 5000);
     }
 
     function test_getAbsorberShares() public {
