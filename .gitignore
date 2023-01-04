@@ -16,3 +16,5 @@ artifacts
 .DS_Store
 forge-cache/
 out/
+
+artifacts_forge
