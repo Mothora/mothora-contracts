@@ -10,9 +10,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     log: true,
     proxy: {
+      proxyContract: 'UUPS',
       execute: {
         init: {
-          methodName: 'init',
+          methodName: 'initialize',
           args: [],
         },
       },
