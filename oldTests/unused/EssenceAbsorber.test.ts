@@ -1,6 +1,6 @@
 import hre from 'hardhat';
 import { expect } from 'chai';
-import { MockArena, Artifacts, Cosmetics, Essence, EssenceAbsorber, MothoraGame } from '../typechain-types';
+import { MockArena, Artifacts, Cosmetics, Essence, EssenceAbsorber, MothoraGame } from '../../typechain-types';
 
 const { ethers, deployments, getNamedAccounts } = hre;
 

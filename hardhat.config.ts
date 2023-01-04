@@ -1,17 +1,9 @@
-import '@nomiclabs/hardhat-ethers';
-import '@nomiclabs/hardhat-etherscan';
-import '@nomiclabs/hardhat-waffle';
 import '@openzeppelin/hardhat-upgrades';
-import '@primitivefi/hardhat-marmite';
-import '@typechain/hardhat';
 import 'dotenv/config';
 import { HardhatUserConfig } from 'hardhat/config';
 import 'hardhat-deploy';
 import 'hardhat-deploy-ethers';
-import 'hardhat-gas-reporter';
-import 'solidity-coverage';
-
-const GWEI = 1000 * 1000 * 1000;
+import '@nomicfoundation/hardhat-toolbox';
 
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
@@ -19,25 +11,20 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         enabled: process.env.FORKING === 'true',
-        url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_TOKEN}`,
+        url: `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_TOKEN}`,
       },
       live: false,
-      tags: ['test', 'local'],
+      tags: ['test'],
       chainId: 1337,
       deploy: ['deploy'],
+    },
+    localhost: {
+      live: false,
+      saveDeployments: true,
+      tags: ['test'],
     },
     goerli: {
-      url: 'https://eth-goerli.alchemyapi.io/v2/' + process.env.ALCHEMY_TOKEN,
-      accounts: {
-        mnemonic: process.env.MNEMONIC as string,
-      },
-      saveDeployments: true,
-      gasPrice: 65 * GWEI,
-      deploy: ['deploy'],
-      live: true,
-    },
-    arbitrumRinkeby: {
-      url: 'https://arb-rinkeby.g.alchemy.com/v2/' + process.env.ALCHEMY_TOKEN,
+      url: 'https://eth-goerli.g.alchemy.com/v2/' + process.env.ALCHEMY_TOKEN,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
@@ -45,31 +32,20 @@ const config: HardhatUserConfig = {
       deploy: ['deploy'],
       live: true,
     },
-    mumbai: {
-      url: 'https://polygon-mumbai.g.alchemy.com/v2/' + process.env.ALCHEMY_TOKEN,
+    arbitrumGoerli: {
+      url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_TOKEN}`,
       accounts: {
         mnemonic: process.env.MNEMONIC as string,
       },
       saveDeployments: true,
-      gasPrice: 1100000000,
       deploy: ['deploy'],
       live: true,
-    },
-    hardhatevm: {
-      hardfork: 'berlin',
-      blockGasLimit: 9500000,
-      gas: 9500000,
-      gasPrice: 8000000000,
-      chainId: 1337,
-      throwOnTransactionFailures: true,
-      throwOnCallFailures: true,
-      url: 'http://localhost:8545',
     },
   },
   solidity: {
     compilers: [
       {
-        version: '0.8.16',
+        version: '0.8.17',
         settings: {
           optimizer: {
             enabled: true,
@@ -82,7 +58,8 @@ const config: HardhatUserConfig = {
   gasReporter: {
     currency: 'USD',
     gasPrice: 100,
-    enabled: process.env.REPORT_GAS === 'true',
+    enabled: true,
+    coinmarketcap: process.env.COINMARKETCAP_TOKEN,
     excludeContracts: [],
   },
   etherscan: {
@@ -90,15 +67,18 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
-    staker1: 1,
-    staker2: 2,
-    staker3: 3,
+    tester1: 1,
+    tester2: 2,
+    tester3: 3,
     hacker: 4,
     tester5: 5,
     tester6: 6,
     tester7: 7,
     tester8: 8,
     tester9: 9,
+    tester10: 10,
+    tester11: 11,
+    tester12: 12,
   },
   mocha: {
     timeout: 100000,

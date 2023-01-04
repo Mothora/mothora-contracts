@@ -23,5 +23,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   );
 };
 export default func;
-func.tags = ['EssenceAbsorber', 'Main', 'Test'];
+func.tags = ['EssenceAbsorber'];
 func.dependencies = ['MothoraGame'];

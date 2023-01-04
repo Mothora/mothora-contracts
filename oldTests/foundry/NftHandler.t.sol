@@ -1,0 +1,1049 @@
+pragma solidity ^0.8.0;
+
+import "foundry/lib/TestUtils.sol";
+import "foundry/lib/Mock.sol";
+import "foundry/lib/ERC721Mintable.sol";
+import "foundry/lib/ERC1155Mintable.sol";
+
+import "forge-std/console2.sol";
+
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+
+import "contracts/modules/absorber/interfaces/INftHandler.sol";
+import "contracts/modules/absorber/interfaces/IAbsorber.sol";
+import "contracts/modules/absorber/rules/ArtifactStakingRules.sol";
+import "contracts/modules/absorber/rules/ExtractorStakingRules.sol";
+import "contracts/modules/absorber/NftHandler.sol";
+import "./rules/ArtifactStakingRules.t.sol";
+
+contract NftHandlerTest is TestUtils, ERC721Holder, ERC1155Holder {
+    ArtifactStakingRulesTest artifactTest;
+
+    NftHandler public nftHandler;
+
+    uint256 public defaultId;
+
+    address public admin = address(111);
+    address public absorber = address(444);
+    address public absorberFactory = address(222);
+
+    address public artifactMetadataStore = address(new Mock("ArtifactMetadataStore"));
+    uint256 public maxArtifactWeight = 2000e18;
+    uint256 public maxStakeableTotal = 100;
+    uint256 public powerFactor = 1e18;
+
+    uint256 public maxStakeable = 40;
+    uint256 public lifetime = 3600;
+
+    uint256 public extractorPower = 1e18;
+
+    uint256 public supportedTokenId = 7;
+
+    ERC721Mintable public nftErc721;
+    ERC1155Mintable public nftErc1155;
+    ArtifactStakingRules public erc721StakingRules;
+    ExtractorStakingRules public erc1155StakingRules;
+
+    event NftConfigSet(address indexed _nft, uint256 indexed _tokenId, INftHandler.NftConfig _nftConfig);
+    event Staked(address indexed user, address indexed nft, uint256 tokenId, uint256 amount);
+
+    function setUp() public {
+        artifactTest = new ArtifactStakingRulesTest();
+
+        vm.label(admin, "admin");
+        vm.label(absorberFactory, "absorberFactory");
+        vm.label(absorber, "absorber");
+
+        nftErc721 = new ERC721Mintable();
+        nftErc1155 = new ERC1155Mintable();
+
+        address impl = address(new ArtifactStakingRules());
+
+        erc721StakingRules = ArtifactStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc721StakingRules.init(
+            admin,
+            absorberFactory,
+            IArtifactMetadataStore(artifactMetadataStore),
+            maxArtifactWeight,
+            maxStakeableTotal,
+            powerFactor
+        );
+
+        impl = address(new ExtractorStakingRules());
+
+        erc1155StakingRules = ExtractorStakingRules(address(new ERC1967Proxy(impl, bytes(""))));
+        erc1155StakingRules.init(admin, absorberFactory, address(nftErc1155), maxStakeable, lifetime);
+
+        impl = address(new NftHandler());
+
+        defaultId = NftHandler(impl).DEFAULT_ID();
+
+        INftHandler.NftConfig memory erc721Config = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC721,
+            stakingRules: IStakingRules(address(erc721StakingRules))
+        });
+
+        address[] memory nfts = new address[](1);
+        nfts[0] = address(nftErc721);
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = defaultId;
+
+        INftHandler.NftConfig[] memory nftConfigs = new INftHandler.NftConfig[](1);
+        nftConfigs[0] = erc721Config;
+
+        nftHandler = NftHandler(address(new ERC1967Proxy(impl, bytes(""))));
+        nftHandler.init(admin, absorber, nfts, tokenIds, nftConfigs);
+
+        vm.prank(absorberFactory);
+        erc721StakingRules.setNftHandler(address(nftHandler));
+        vm.prank(absorberFactory);
+        erc1155StakingRules.setNftHandler(address(nftHandler));
+    }
+
+    function test_init() public {
+        assertEq(nftHandler.getRoleAdmin(nftHandler.NH_ADMIN()), nftHandler.NH_ADMIN());
+        assertTrue(nftHandler.hasRole(nftHandler.NH_ADMIN(), admin));
+        assertEq(address(nftHandler.absorber()), absorber);
+    }
+
+    function test_getAllStakingRules() public {
+        address[] memory allStakingRules = new address[](1);
+        allStakingRules[0] = address(erc721StakingRules);
+
+        assertAddressArrayEq(nftHandler.getAllStakingRules(), allStakingRules);
+    }
+
+    function test_getAllStakingRulesLength() public {
+        assertEq(nftHandler.getAllStakingRulesLength(), 1);
+    }
+
+    function test_getSupportedInterface() public {
+        assertEq(
+            uint256(nftHandler.getSupportedInterface(address(1), defaultId)),
+            uint256(INftHandler.Interfaces.Unsupported)
+        );
+
+        assertEq(
+            uint256(nftHandler.getSupportedInterface(address(nftErc721), supportedTokenId)),
+            uint256(INftHandler.Interfaces.ERC721)
+        );
+    }
+
+    function test_getStakingRules() public {
+        assertEq(address(nftHandler.getStakingRules(address(nftErc1155), 654)), address(0));
+        assertEq(address(nftHandler.getStakingRules(address(nftErc1155), 0)), address(0));
+        assertEq(address(nftHandler.getStakingRules(address(nftErc1155), supportedTokenId)), address(0));
+
+        assertEq(
+            address(nftHandler.getStakingRules(address(nftErc721), supportedTokenId)),
+            address(erc721StakingRules)
+        );
+
+        assertEq(address(nftHandler.getStakingRules(address(nftErc721), defaultId)), address(erc721StakingRules));
+
+        assertEq(address(nftHandler.getStakingRules(address(nftErc721), 654)), address(erc721StakingRules));
+
+        assertEq(address(nftHandler.getStakingRules(address(nftErc721), 0)), address(erc721StakingRules));
+    }
+
+    function test_getNftPower() public {
+        // use test cases from ArtifactStakingRulesTest
+        for (uint256 i = 0; i < artifactTest.testCasesLength(); i++) {
+            ArtifactStakingRulesTest.TestCase memory testCase = artifactTest.getTestCase(i);
+            uint256 tokenId = i;
+
+            IArtifactMetadataStore.ArtifactMetadata memory metadata = artifactTest.getMockMetadata(
+                testCase.artifactGeneration,
+                testCase.artifactRarity
+            );
+
+            vm.mockCall(
+                artifactMetadataStore,
+                abi.encodeCall(IArtifactMetadataStore.metadataForArtifact, (tokenId)),
+                abi.encode(metadata)
+            );
+
+            assertEq(nftHandler.getNftPower(address(1), address(nftErc721), tokenId, 1), testCase.power);
+        }
+    }
+
+    struct AbsorberTotalPowerTestCase {
+        uint256 stakingRulesPower;
+        uint256 totalPower;
+    }
+
+    // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
+    uint256 public constant absorberTotalPowerTestCasesLength = 2;
+
+    function getTotalPowerTestCase(uint256 _i) public pure returns (AbsorberTotalPowerTestCase memory) {
+        AbsorberTotalPowerTestCase[absorberTotalPowerTestCasesLength] memory testCases = [
+            // TODO: add more test cases
+            AbsorberTotalPowerTestCase(15e17, 15e17),
+            AbsorberTotalPowerTestCase(15e17, 225e16)
+        ];
+
+        return testCases[_i];
+    }
+
+    function test_getAbsorberTotalPower() public {
+        INftHandler.NftConfig memory nullConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(address(0))
+        });
+
+        vm.prank(admin);
+        nftHandler.setNftConfig(address(nftErc721), defaultId, nullConfig);
+
+        for (uint256 i = 0; i < absorberTotalPowerTestCasesLength; i++) {
+            AbsorberTotalPowerTestCase memory testCase = getTotalPowerTestCase(i);
+            address nftAddress = address(uint160(i + 999));
+
+            INftHandler.NftConfig memory nftConfig = INftHandler.NftConfig({
+                supportedInterface: INftHandler.Interfaces.ERC1155,
+                stakingRules: IStakingRules(nftAddress)
+            });
+
+            vm.prank(admin);
+            nftHandler.setNftConfig(nftAddress, defaultId, nftConfig);
+
+            vm.mockCall(
+                nftAddress,
+                abi.encodeCall(IStakingRules.getAbsorberPower, ()),
+                abi.encode(testCase.stakingRulesPower)
+            );
+
+            assertEq(nftHandler.getAbsorberTotalPower(), testCase.totalPower);
+        }
+    }
+
+    struct TestNftConfig {
+        address nftAddress;
+        uint256 tokenId;
+        INftHandler.NftConfig nftConfig;
+        INftHandler.Interfaces nftConfigInterface;
+        address nftConfigStakingRules;
+        address[] allStakingRules;
+        INftHandler.Interfaces expectedInterface;
+        address expectedStakingRules;
+        uint256 expectedRulesUsage;
+        bytes4 revertString;
+    }
+
+    // workaround for "UnimplementedFeatureError: Copying of type struct memory to storage not yet supported."
+    uint256 public constant nftConfigTestCasesLength = 16;
+
+    function getTestNftConfig(uint256 _index) public view returns (TestNftConfig memory) {
+        // 4 - Small Extractor
+        // 5 - Medium Extractor
+        // 6 - Large Extractor
+        // 7 - Absorber Part
+
+        uint256 smallExtractorId = 4;
+        uint256 mediumExtractorId = 5;
+        uint256 largeExtractorId = 6;
+        uint256 absorberPartId = 7;
+
+        address extractorStakingRules = address(6789);
+        address absorberPartsStakingRules = address(6790);
+
+        INftHandler.NftConfig memory placeholderConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.Unsupported,
+            stakingRules: IStakingRules(address(0))
+        });
+
+        TestNftConfig[nftConfigTestCasesLength] memory testNftConfigCases = [
+            // TODO: add more test cases
+            TestNftConfig({
+                nftAddress: address(nftErc721),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC721,
+                nftConfigStakingRules: address(erc721StakingRules),
+                allStakingRules: new address[](1),
+                expectedInterface: INftHandler.Interfaces.ERC721,
+                expectedStakingRules: address(erc721StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc721),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC721,
+                nftConfigStakingRules: address(erc721StakingRules),
+                allStakingRules: new address[](1),
+                expectedInterface: INftHandler.Interfaces.ERC721,
+                expectedStakingRules: address(erc721StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC721,
+                nftConfigStakingRules: address(erc721StakingRules),
+                allStakingRules: new address[](1),
+                expectedInterface: INftHandler.Interfaces.ERC721,
+                expectedStakingRules: address(erc721StakingRules),
+                expectedRulesUsage: 2,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: address(erc721StakingRules),
+                allStakingRules: new address[](1),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: address(erc721StakingRules),
+                expectedRulesUsage: 2,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: address(erc1155StakingRules),
+                allStakingRules: new address[](2),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: address(erc1155StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc721),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.Unsupported,
+                nftConfigStakingRules: address(0),
+                allStakingRules: new address[](1),
+                expectedInterface: INftHandler.Interfaces.Unsupported,
+                expectedStakingRules: address(0),
+                expectedRulesUsage: 0,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc721),
+                tokenId: defaultId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC721,
+                nftConfigStakingRules: address(erc721StakingRules),
+                allStakingRules: new address[](2),
+                expectedInterface: INftHandler.Interfaces.ERC721,
+                expectedStakingRules: address(erc721StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: smallExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: extractorStakingRules,
+                allStakingRules: new address[](3),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: extractorStakingRules,
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: mediumExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: extractorStakingRules,
+                allStakingRules: new address[](3),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: extractorStakingRules,
+                expectedRulesUsage: 2,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: largeExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: extractorStakingRules,
+                allStakingRules: new address[](3),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: extractorStakingRules,
+                expectedRulesUsage: 3,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: absorberPartId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: absorberPartsStakingRules,
+                allStakingRules: new address[](4),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: absorberPartsStakingRules,
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: smallExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.Unsupported,
+                nftConfigStakingRules: address(0),
+                allStakingRules: new address[](4),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: address(erc1155StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: mediumExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.Unsupported,
+                nftConfigStakingRules: address(0),
+                allStakingRules: new address[](4),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: address(erc1155StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: largeExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.Unsupported,
+                nftConfigStakingRules: address(0),
+                allStakingRules: new address[](3),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: address(erc1155StakingRules),
+                expectedRulesUsage: 1,
+                revertString: ""
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: smallExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.Unsupported,
+                nftConfigStakingRules: extractorStakingRules,
+                allStakingRules: new address[](3),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: address(erc1155StakingRules),
+                expectedRulesUsage: 1,
+                revertString: NftHandler.WrongInterface.selector
+            }),
+            TestNftConfig({
+                nftAddress: address(nftErc1155),
+                tokenId: smallExtractorId,
+                nftConfig: placeholderConfig,
+                nftConfigInterface: INftHandler.Interfaces.ERC1155,
+                nftConfigStakingRules: extractorStakingRules,
+                allStakingRules: new address[](4),
+                expectedInterface: INftHandler.Interfaces.ERC1155,
+                expectedStakingRules: extractorStakingRules,
+                expectedRulesUsage: 1,
+                revertString: ""
+            })
+        ];
+
+        testNftConfigCases[_index].nftConfig = INftHandler.NftConfig({
+            supportedInterface: testNftConfigCases[_index].nftConfigInterface,
+            stakingRules: IStakingRules(testNftConfigCases[_index].nftConfigStakingRules)
+        });
+
+        if (_index == 0) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc721StakingRules);
+        } else if (_index == 1) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc721StakingRules);
+        } else if (_index == 2) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc721StakingRules);
+        } else if (_index == 3) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc721StakingRules);
+        } else if (_index == 4) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc721StakingRules);
+            testNftConfigCases[_index].allStakingRules[1] = address(erc1155StakingRules);
+        } else if (_index == 5) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc1155StakingRules);
+        } else if (_index == 6) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc1155StakingRules);
+            testNftConfigCases[_index].allStakingRules[1] = address(erc721StakingRules);
+        } else if (_index == 7 || _index == 8 || _index == 9) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc1155StakingRules);
+            testNftConfigCases[_index].allStakingRules[1] = address(erc721StakingRules);
+            testNftConfigCases[_index].allStakingRules[2] = address(extractorStakingRules);
+        } else if (_index == 10 || _index == 11 || _index == 12) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc1155StakingRules);
+            testNftConfigCases[_index].allStakingRules[1] = address(erc721StakingRules);
+            testNftConfigCases[_index].allStakingRules[2] = address(extractorStakingRules);
+            testNftConfigCases[_index].allStakingRules[3] = address(absorberPartsStakingRules);
+        } else if (_index == 13 || _index == 14) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc1155StakingRules);
+            testNftConfigCases[_index].allStakingRules[1] = address(erc721StakingRules);
+            testNftConfigCases[_index].allStakingRules[2] = address(absorberPartsStakingRules);
+        } else if (_index == 15) {
+            testNftConfigCases[_index].allStakingRules[0] = address(erc1155StakingRules);
+            testNftConfigCases[_index].allStakingRules[1] = address(erc721StakingRules);
+            testNftConfigCases[_index].allStakingRules[2] = address(absorberPartsStakingRules);
+            testNftConfigCases[_index].allStakingRules[3] = address(extractorStakingRules);
+        }
+
+        return testNftConfigCases[_index];
+    }
+
+    function assertNftConfig(TestNftConfig memory data) public {
+        assertAddressArrayEq(nftHandler.getAllStakingRules(), data.allStakingRules);
+        assertEq(nftHandler.getAllStakingRulesLength(), data.allStakingRules.length);
+
+        assertEq(
+            uint256(nftHandler.getSupportedInterface(data.nftAddress, data.tokenId)),
+            uint256(data.expectedInterface)
+        );
+        assertEq(address(nftHandler.getStakingRules(data.nftAddress, data.tokenId)), data.expectedStakingRules);
+        assertEq(nftHandler.stakingRulesUsage(data.expectedStakingRules), data.expectedRulesUsage);
+    }
+
+    function test_setNftConfig() public {
+        for (uint256 i = 0; i < nftConfigTestCasesLength; i++) {
+            console2.log("TEST CASE:", i);
+
+            TestNftConfig memory data = getTestNftConfig(i);
+
+            // check original config first
+            if (i > 0) {
+                if (data.revertString == bytes4(0)) {
+                    vm.prank(admin);
+                    vm.expectEmit(true, true, true, true);
+                    emit NftConfigSet(data.nftAddress, data.tokenId, data.nftConfig);
+                    nftHandler.setNftConfig(data.nftAddress, data.tokenId, data.nftConfig);
+                } else {
+                    vm.prank(admin);
+                    vm.expectRevert(data.revertString);
+                    nftHandler.setNftConfig(data.nftAddress, data.tokenId, data.nftConfig);
+                }
+            }
+
+            assertNftConfig(data);
+        }
+    }
+
+    function test_stakeNftERC721() public {
+        vm.expectRevert(NftHandler.InvalidNftAddress.selector);
+        nftHandler.stakeNft(address(0), 1, 1);
+
+        vm.expectRevert(NftHandler.NothingToStake.selector);
+        nftHandler.stakeNft(address(nftErc721), 1, 0);
+
+        uint256 tokenId = 1;
+        vm.mockCall(
+            artifactMetadataStore,
+            abi.encodeCall(IArtifactMetadataStore.metadataForArtifact, (tokenId)),
+            abi.encode(
+                artifactTest.getMockMetadata(
+                    artifactTest.getTestCase(0).artifactGeneration,
+                    artifactTest.getTestCase(0).artifactRarity
+                )
+            )
+        );
+
+        vm.expectRevert(NftHandler.WrongAmountForERC721.selector);
+        nftHandler.stakeNft(address(nftErc721), tokenId, 10);
+
+        vm.expectRevert(NftHandler.NoStakingRules.selector);
+        nftHandler.stakeNft(address(nftErc1155), tokenId, 10);
+
+        nftErc721.mint(address(this), tokenId);
+        nftErc721.approve(address(nftHandler), tokenId);
+
+        address h = address(nftHandler.absorber());
+        vm.mockCall(h, abi.encodeCall(IAbsorber.updateNftPower, (address(this))), abi.encode(true));
+
+        vm.expectEmit(true, true, true, true);
+        emit Staked(address(this), address(nftErc721), tokenId, 1);
+        nftHandler.stakeNft(address(nftErc721), tokenId, 1);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc721), tokenId), 1);
+        assertEq(
+            nftHandler.getUserPower(address(this)),
+            nftHandler.getNftPower(address(this), address(nftErc721), tokenId, 1)
+        );
+        assertEq(nftErc721.ownerOf(tokenId), address(nftHandler));
+
+        vm.expectRevert(NftHandler.NftAlreadyStaked.selector);
+        nftHandler.stakeNft(address(nftErc721), tokenId, 1);
+    }
+
+    function test_stakeNftERC1155() public {
+        uint256 tokenId = 1;
+        uint256 amount = 20;
+
+        INftHandler.NftConfig memory newConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(erc1155StakingRules)
+        });
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit NftConfigSet(address(nftErc1155), defaultId, newConfig);
+        nftHandler.setNftConfig(address(nftErc1155), defaultId, newConfig);
+
+        address h = address(nftHandler.absorber());
+        vm.mockCall(h, abi.encodeCall(IAbsorber.updateNftPower, (address(this))), abi.encode(true));
+
+        nftErc1155.mint(address(this), tokenId, amount);
+        nftErc1155.setApprovalForAll(address(nftHandler), true);
+
+        vm.mockCall(absorber, abi.encodeCall(IAbsorber.callUpdateRewards, ()), abi.encode(true));
+
+        vm.prank(admin);
+        erc1155StakingRules.setExtractorPower(tokenId, extractorPower);
+
+        vm.expectEmit(true, true, true, true);
+        emit Staked(address(this), address(nftErc1155), tokenId, amount);
+        nftHandler.stakeNft(address(nftErc1155), tokenId, amount);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), tokenId), amount);
+        assertEq(
+            nftHandler.getUserPower(address(this)),
+            nftHandler.getNftPower(address(this), address(nftErc1155), tokenId, amount)
+        );
+        assertEq(nftErc1155.balanceOf(address(nftHandler), tokenId), amount);
+
+        uint256 newAmount = 7;
+        uint256 currentUserPower = nftHandler.getUserPower(address(this));
+
+        nftErc1155.mint(address(this), tokenId, newAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit Staked(address(this), address(nftErc1155), tokenId, newAmount);
+        nftHandler.stakeNft(address(nftErc1155), tokenId, newAmount);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), tokenId), amount + newAmount);
+        assertEq(
+            nftHandler.getUserPower(address(this)),
+            currentUserPower + nftHandler.getNftPower(address(this), address(nftErc1155), tokenId, newAmount)
+        );
+        assertEq(nftErc1155.balanceOf(address(nftHandler), tokenId), amount + newAmount);
+    }
+
+    function prepareNftHelperERC721(uint256 tokenId) public {
+        vm.mockCall(
+            artifactMetadataStore,
+            abi.encodeCall(IArtifactMetadataStore.metadataForArtifact, (tokenId)),
+            abi.encode(
+                artifactTest.getMockMetadata(
+                    artifactTest.getTestCase(0).artifactGeneration,
+                    artifactTest.getTestCase(0).artifactRarity
+                )
+            )
+        );
+
+        address h = address(nftHandler.absorber());
+        vm.mockCall(h, abi.encodeCall(IAbsorber.updateNftPower, (address(this))), abi.encode(true));
+
+        nftErc721.mint(address(this), tokenId);
+        nftErc721.approve(address(nftHandler), tokenId);
+    }
+
+    function stakeNftHelperERC721(uint256 tokenId) public {
+        prepareNftHelperERC721(tokenId);
+        nftHandler.stakeNft(address(nftErc721), tokenId, 1);
+    }
+
+    function prepareNftHelperERC1155(uint256 tokenId, uint256 amount) public {
+        INftHandler.NftConfig memory newConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(erc1155StakingRules)
+        });
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit NftConfigSet(address(nftErc1155), defaultId, newConfig);
+        nftHandler.setNftConfig(address(nftErc1155), defaultId, newConfig);
+
+        address h = address(nftHandler.absorber());
+        vm.mockCall(h, abi.encodeCall(IAbsorber.updateNftPower, (address(this))), abi.encode(true));
+
+        vm.mockCall(address(absorber), abi.encodeCall(IAbsorber.callUpdateRewards, ()), abi.encode(true));
+
+        vm.prank(admin);
+        erc1155StakingRules.setExtractorPower(tokenId, extractorPower);
+
+        nftErc1155.mint(address(this), tokenId, amount);
+        nftErc1155.setApprovalForAll(address(nftHandler), true);
+    }
+
+    function stakeNftHelperERC1155(uint256 tokenId, uint256 amount) public {
+        prepareNftHelperERC1155(tokenId, amount);
+        nftHandler.stakeNft(address(nftErc1155), tokenId, amount);
+    }
+
+    function prepareBatchStake()
+        public
+        returns (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        )
+    {
+        _nft = new address[](3);
+        _tokenId = new uint256[](3);
+        _amount = new uint256[](3);
+        _wrongAmount = new uint256[](99);
+
+        _nft[0] = address(nftErc721);
+        _nft[1] = address(nftErc721);
+        _nft[2] = address(nftErc1155);
+
+        _tokenId[0] = 1;
+        _tokenId[1] = 2;
+        _tokenId[2] = 3;
+
+        _amount[0] = 1;
+        _amount[1] = 1;
+        _amount[2] = 4;
+
+        for (uint256 i = 0; i < _nft.length; i++) {
+            if (i <= 1) {
+                prepareNftHelperERC721(_tokenId[i]);
+            } else {
+                prepareNftHelperERC1155(_tokenId[i], _amount[i]);
+            }
+        }
+
+        return (_nft, _tokenId, _amount, _wrongAmount);
+    }
+
+    function validateBatchStake(uint256[] memory _tokenId, uint256[] memory _amount) public {
+        for (uint256 i = 0; i < _tokenId.length; i++) {
+            address nftAddress;
+            if (i <= 1) {
+                nftAddress = address(nftErc721);
+            } else {
+                nftAddress = address(nftErc1155);
+            }
+
+            assertEq(nftHandler.stakedNfts(address(this), nftAddress, _tokenId[i]), _amount[i]);
+        }
+    }
+
+    function test_batchStakeNft() public {
+        (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        ) = prepareBatchStake();
+
+        vm.expectRevert(NftHandler.InvalidData.selector);
+        nftHandler.batchStakeNft(_nft, _tokenId, _wrongAmount);
+
+        nftHandler.batchStakeNft(_nft, _tokenId, _amount);
+
+        validateBatchStake(_tokenId, _amount);
+    }
+
+    function test_unstakeNft() public {
+        uint256 tokenId = 1;
+        uint256 amount = 20;
+
+        stakeNftHelperERC721(tokenId);
+        stakeNftHelperERC1155(tokenId, amount);
+
+        vm.expectRevert(NftHandler.InvalidNftAddress.selector);
+        nftHandler.unstakeNft(address(0), tokenId, 1);
+
+        vm.expectRevert(NftHandler.NothingToStake.selector);
+        nftHandler.unstakeNft(address(nftErc721), tokenId, 0);
+
+        vm.expectRevert(NftHandler.WrongAmountForERC721.selector);
+        nftHandler.unstakeNft(address(nftErc721), tokenId, 10);
+
+        uint256 wrongTokenId = 10;
+        vm.mockCall(
+            artifactMetadataStore,
+            abi.encodeCall(IArtifactMetadataStore.metadataForArtifact, (wrongTokenId)),
+            abi.encode(
+                artifactTest.getMockMetadata(
+                    artifactTest.getTestCase(0).artifactGeneration,
+                    artifactTest.getTestCase(0).artifactRarity
+                )
+            )
+        );
+
+        vm.expectRevert(NftHandler.NftNotStaked.selector);
+        nftHandler.unstakeNft(address(nftErc721), wrongTokenId, 1);
+
+        vm.expectRevert(NftHandler.NftNotAllowed.selector);
+        nftHandler.unstakeNft(address(1), tokenId, 1);
+
+        vm.mockCall(
+            address(erc1155StakingRules),
+            abi.encodeCall(IStakingRules.processUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
+            abi.encode(bytes(""))
+        );
+        nftErc1155.mint(address(nftHandler), tokenId, 1);
+
+        vm.expectRevert(NftHandler.AmountTooBig.selector);
+        nftHandler.unstakeNft(address(nftErc1155), tokenId, amount + 1);
+
+        uint256 currentUserPower = nftHandler.getUserPower(address(this));
+
+        nftHandler.unstakeNft(address(nftErc721), tokenId, 1);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc721), tokenId), 0);
+        assertEq(
+            nftHandler.getUserPower(address(this)),
+            currentUserPower - nftHandler.getNftPower(address(this), address(nftErc721), tokenId, 1)
+        );
+        assertEq(nftErc721.ownerOf(tokenId), address(this));
+    }
+
+    function test_unstakeNftAndUnsupported() public {
+        uint256 tokenId = 1;
+        uint256 amount = 20;
+
+        stakeNftHelperERC721(tokenId);
+        stakeNftHelperERC1155(tokenId, amount);
+
+        vm.mockCall(
+            address(erc1155StakingRules),
+            abi.encodeCall(IStakingRules.processUnstake, (address(this), address(nftErc1155), tokenId, amount + 1)),
+            abi.encode(bytes(""))
+        );
+        nftErc1155.mint(address(nftHandler), tokenId, 1);
+
+        uint256 currentUserPower = nftHandler.getUserPower(address(this));
+
+        INftHandler.Interfaces supportsInterface = nftHandler.getSupportedInterface(address(nftErc721), tokenId);
+        assertEq(uint256(supportsInterface), uint256(INftHandler.Interfaces.ERC721));
+
+        INftHandler.NftConfig memory placeholderConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.Unsupported,
+            stakingRules: IStakingRules(address(0))
+        });
+
+        uint256 DEFAULT_ID = nftHandler.DEFAULT_ID();
+
+        vm.prank(admin);
+        nftHandler.setNftConfig(address(nftErc721), DEFAULT_ID, placeholderConfig);
+
+        supportsInterface = nftHandler.getSupportedInterface(address(nftErc721), tokenId);
+        assertEq(uint256(supportsInterface), uint256(INftHandler.Interfaces.Unsupported));
+
+        nftHandler.unstakeNft(address(nftErc721), tokenId, 1);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc721), tokenId), 0);
+        assertEq(
+            nftHandler.getUserPower(address(this)),
+            currentUserPower - nftHandler.getNftPower(address(this), address(nftErc721), tokenId, 1)
+        );
+        assertEq(nftErc721.ownerOf(tokenId), address(this));
+    }
+
+    function test_batchUnstakeNft() public {
+        (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        ) = prepareBatchStake();
+
+        nftHandler.batchStakeNft(_nft, _tokenId, _amount);
+        validateBatchStake(_tokenId, _amount);
+
+        address[] memory _nftUnstake = new address[](2);
+        uint256[] memory _tokenIdUnstake = new uint256[](2);
+        uint256[] memory _amountUnstake = new uint256[](2);
+
+        for (uint256 i = 0; i < 2; i++) {
+            _nftUnstake[i] = _nft[i];
+            _tokenIdUnstake[i] = _tokenId[i];
+            _amountUnstake[i] = _amount[i];
+        }
+
+        vm.expectRevert(NftHandler.InvalidData.selector);
+        nftHandler.batchUnstakeNft(_nftUnstake, _tokenIdUnstake, _wrongAmount);
+
+        nftHandler.batchUnstakeNft(_nftUnstake, _tokenIdUnstake, _amountUnstake);
+
+        _amount = new uint256[](2);
+        validateBatchStake(_tokenIdUnstake, _amount);
+    }
+
+    function test_replaceExtractor() public {
+        vm.mockCall(absorber, abi.encodeCall(IAbsorber.callUpdateRewards, ()), abi.encode(true));
+
+        uint256 tokenId = 1;
+        uint256 amount = 20;
+        uint256 replacedSpotId = 0;
+
+        vm.expectRevert(NftHandler.InvalidNftAddress.selector);
+        nftHandler.replaceExtractor(address(0), tokenId, amount, replacedSpotId);
+
+        vm.expectRevert(NftHandler.NothingToStake.selector);
+        nftHandler.replaceExtractor(address(nftErc1155), tokenId, 0, replacedSpotId);
+
+        vm.expectRevert(NftHandler.StakingRulesRequired.selector);
+        nftHandler.replaceExtractor(address(nftErc1155), tokenId, amount, replacedSpotId);
+
+        vm.expectRevert(NftHandler.MustBeERC1155.selector);
+        nftHandler.replaceExtractor(address(nftErc721), tokenId, amount, replacedSpotId);
+
+        INftHandler.NftConfig memory wrongConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(erc721StakingRules)
+        });
+
+        vm.prank(admin);
+        nftHandler.setNftConfig(address(nftErc1155), defaultId, wrongConfig);
+
+        vm.expectRevert(NftHandler.NotIExtractorStakingRules.selector);
+        nftHandler.replaceExtractor(address(nftErc1155), tokenId, amount, replacedSpotId);
+
+        stakeNftHelperERC1155(tokenId, amount);
+
+        INftHandler.NftConfig memory newConfig = INftHandler.NftConfig({
+            supportedInterface: INftHandler.Interfaces.ERC1155,
+            stakingRules: IStakingRules(erc1155StakingRules)
+        });
+
+        vm.prank(admin);
+        nftHandler.setNftConfig(address(nftErc1155), defaultId, newConfig);
+
+        uint256 replaceTokenId = 3;
+        uint256 replaceAmount = 1;
+        IStakingRules stakingRules = nftHandler.getStakingRules(address(nftErc1155), replaceTokenId);
+        vm.prank(admin);
+        ExtractorStakingRules(address(stakingRules)).setExtractorPower(replaceTokenId, extractorPower + 1);
+
+        nftErc1155.mint(address(this), replaceTokenId, replaceAmount);
+        nftErc1155.setApprovalForAll(address(nftHandler), true);
+
+        nftHandler.replaceExtractor(address(nftErc1155), replaceTokenId, replaceAmount, replacedSpotId);
+
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), tokenId), amount - 1);
+        assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), replaceTokenId), 1);
+        assertEq(nftErc1155.balanceOf(address(nftHandler), tokenId), amount - 1);
+        assertEq(nftErc1155.balanceOf(address(nftHandler), replaceTokenId), 1);
+    }
+
+    function prepareBatchStakeExtractor()
+        public
+        returns (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        )
+    {
+        _nft = new address[](3);
+        _tokenId = new uint256[](3);
+        _amount = new uint256[](3);
+        _wrongAmount = new uint256[](99);
+
+        _nft[0] = address(nftErc1155);
+        _nft[1] = address(nftErc1155);
+        _nft[2] = address(nftErc1155);
+
+        _tokenId[0] = 1;
+        _tokenId[1] = 2;
+        _tokenId[2] = 3;
+
+        _amount[0] = 4;
+        _amount[1] = 2;
+        _amount[2] = 4;
+
+        for (uint256 i = 0; i < _nft.length; i++) {
+            prepareNftHelperERC1155(_tokenId[i], _amount[i]);
+        }
+
+        return (_nft, _tokenId, _amount, _wrongAmount);
+    }
+
+    function validateBatchStakeExtractor(uint256[] memory _tokenId, uint256[] memory _amount) public {
+        for (uint256 i = 0; i < _tokenId.length; i++) {
+            assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), _tokenId[i]), _amount[i]);
+        }
+    }
+
+    function prepareBatchReplace()
+        public
+        returns (
+            address[] memory _nftReplace,
+            uint256[] memory _tokenIdReplace,
+            uint256[] memory _amountReplace,
+            uint256[] memory _replacedSpotIdReplaced
+        )
+    {
+        uint256 extractorCount = erc1155StakingRules.getExtractorCount();
+
+        _nftReplace = new address[](extractorCount);
+        _tokenIdReplace = new uint256[](extractorCount);
+        _amountReplace = new uint256[](extractorCount);
+        _replacedSpotIdReplaced = new uint256[](extractorCount);
+
+        for (uint256 i = 0; i < extractorCount; i++) {
+            _nftReplace[i] = address(nftErc1155);
+            _tokenIdReplace[i] = i + 10;
+            _amountReplace[i] = 1;
+            _replacedSpotIdReplaced[i] = i;
+
+            (, uint256 tokenId, ) = erc1155StakingRules.stakedExtractor(i);
+            uint256 currentPower = erc1155StakingRules.extractorPower(tokenId);
+
+            vm.prank(admin);
+            erc1155StakingRules.setExtractorPower(_tokenIdReplace[i], currentPower + 1);
+
+            nftErc1155.mint(address(this), _tokenIdReplace[i], _amountReplace[i]);
+            nftErc1155.setApprovalForAll(address(nftHandler), true);
+        }
+    }
+
+    function validateBatchReplace(
+        uint256[] memory _tokenId,
+        uint256[] memory _amount,
+        uint256[] memory _replacedSpotId
+    ) public {
+        for (uint256 i = 0; i < _tokenId.length; i++) {
+            assertEq(nftHandler.stakedNfts(address(this), address(nftErc1155), _tokenId[i]), _amount[i]);
+
+            (, uint256 tokenId, ) = erc1155StakingRules.stakedExtractor(_replacedSpotId[i]);
+
+            assertEq(tokenId, _tokenId[i]);
+        }
+    }
+
+    function test_batchReplaceExtractor() public {
+        vm.mockCall(absorber, abi.encodeCall(IAbsorber.callUpdateRewards, ()), abi.encode(true));
+
+        (
+            address[] memory _nft,
+            uint256[] memory _tokenId,
+            uint256[] memory _amount,
+            uint256[] memory _wrongAmount
+        ) = prepareBatchStakeExtractor();
+
+        nftHandler.batchStakeNft(_nft, _tokenId, _amount);
+        validateBatchStakeExtractor(_tokenId, _amount);
+
+        uint256[] memory replacedSpotId = new uint256[](3);
+
+        vm.expectRevert(NftHandler.InvalidData.selector);
+        nftHandler.batchReplaceExtractor(_nft, _tokenId, _wrongAmount, replacedSpotId);
+
+        (
+            address[] memory _nftReplace,
+            uint256[] memory _tokenIdReplace,
+            uint256[] memory _amountReplace,
+            uint256[] memory _replacedSpotIdReplace
+        ) = prepareBatchReplace();
+
+        nftHandler.batchReplaceExtractor(_nftReplace, _tokenIdReplace, _amountReplace, _replacedSpotIdReplace);
+        validateBatchReplace(_tokenIdReplace, _amountReplace, _replacedSpotIdReplace);
+    }
+}
