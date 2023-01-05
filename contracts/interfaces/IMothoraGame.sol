@@ -3,32 +3,10 @@ pragma solidity ^0.8.17;
 
 interface IMothoraGame {
     /******************
-    /  ENUMS
-    /******************/
-
-    enum DAO {
-        NONE,
-        SC, // Shadow Council
-        EH, // Eclipse Horizon
-        TF // The Federation
-    }
-
-    /******************
-    /  STRUCTS
-    /******************/
-
-    // the whole struct can be packed into a single bytes element
-    struct Account {
-        uint256 id;
-        bool frozen;
-        DAO dao;
-    }
-
-    /******************
     /  EVENTS
     /******************/
 
-    event AccountCreated(address indexed player, uint256 id);
+    event AccountCreated(address indexed player, uint256 dao);
     event AccountStatusChanged(address indexed player, bool freezeStatus);
     event Defect(address indexed player, uint256 newDAO);
     event ArenaModuleUpdated(address indexed arenaModule);
@@ -88,28 +66,23 @@ interface IMothoraGame {
     function defect(uint256 newDAO) external;
 
     /**
-     * @dev Returns a player's id
-     * @return Players'id
+     * @dev Returns a player's DAO and freeze status
+     * @param _player The address of the player
      */
-    function getPlayerId(address player) external view returns (uint256);
+    function getAccount(address _player) external view returns (uint256 dao, bool frozen);
 
     /**
-     * @dev Returns a player's dao
-     * @return DAO code
+     * @dev Returns all players
+     * @return All player addresses
      */
-    function getPlayerDAO(address player) external view returns (uint256);
+    function getAllPlayers() external view returns (address[] memory);
 
     /**
-     * @dev Returns a player's status
+     * @dev Returns all active players by dao
+     * @param dao the dao to filter by
      * @return Frozen status
      */
-    function getPlayerStatus(address player) external view returns (bool);
-
-    /**
-     * @dev Returns all active players
-     * @return Frozen status
-     */
-    function getAllActivePlayers() external view returns (address[] memory);
+    function getAllActivePlayersByDao(uint256 dao) external view returns (address[] memory);
 
     /**
      * @dev Returns an address by id

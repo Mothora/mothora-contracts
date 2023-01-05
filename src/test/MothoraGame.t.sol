@@ -38,11 +38,11 @@ contract MothoraGameTest is BaseTest {
         vm.prank(player);
         mothoraGame.createAccount(1);
 
-        uint256 dao = mothoraGame.getPlayerDAO(player);
+        (uint256 dao, ) = mothoraGame.getAccount(player);
         assertEq(dao, 1);
 
-        uint256 totalDAOMembers = mothoraGame.totalDAOMembers(dao);
-        assertEq(totalDAOMembers, 1);
+        address[] memory allDAOMembers = mothoraGame.getAllActivePlayersByDao(dao);
+        assertEq(allDAOMembers.length, 1);
     }
 
     function test_revert_already_has_faction() public {
@@ -69,14 +69,17 @@ contract MothoraGameTest is BaseTest {
         vm.prank(player);
         mothoraGame.defect(2);
 
-        uint256 dao = mothoraGame.getPlayerDAO(player);
+        (uint256 dao, ) = mothoraGame.getAccount(player);
+
         assertEq(dao, 2);
 
-        uint256 totalDAOMembers = mothoraGame.totalDAOMembers(1);
-        assertEq(totalDAOMembers, 0);
+        address[] memory allDAOMembers = mothoraGame.getAllActivePlayersByDao(1);
 
-        totalDAOMembers = mothoraGame.totalDAOMembers(2);
-        assertEq(totalDAOMembers, 1);
+        assertEq(allDAOMembers.length, 0);
+
+        allDAOMembers = mothoraGame.getAllActivePlayersByDao(2);
+
+        assertEq(allDAOMembers.length, 1);
     }
 
     function test_revert_defect_twice_same_dao() public {
@@ -106,7 +109,7 @@ contract MothoraGameTest is BaseTest {
         vm.prank(deployer);
         mothoraGame.changeFreezeStatus(player, true);
 
-        bool freezeStatus = mothoraGame.getPlayerStatus(player);
+        (, bool freezeStatus) = mothoraGame.getAccount(player);
 
         assert(freezeStatus);
     }
@@ -136,8 +139,44 @@ contract MothoraGameTest is BaseTest {
 
         vm.prank(deployer);
         mothoraGame.changeFreezeStatus(player, false);
-        bool freezeStatus = mothoraGame.getPlayerStatus(player);
+        (, bool freezeStatus) = mothoraGame.getAccount(player);
 
         assert(!freezeStatus);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        Unit tests: Getters
+    //////////////////////////////////////////////////////////////*/
+
+    function test_return_all_accounts_in_dao() public {
+        address player1 = address(0x1231);
+        address player2 = address(0x1232);
+        address player3 = address(0x1233);
+        address player4 = address(0x1234);
+
+        vm.prank(player1);
+        mothoraGame.createAccount(1);
+        vm.prank(player2);
+        mothoraGame.createAccount(1);
+        vm.prank(player3);
+        mothoraGame.createAccount(1);
+        vm.prank(player4);
+        mothoraGame.createAccount(2);
+
+        vm.prank(deployer);
+        mothoraGame.changeFreezeStatus(player2, true);
+
+        address[] memory players = mothoraGame.getAllActivePlayersByDao(1);
+
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == player1) {
+                assert(true);
+            } else if (players[i] == player3) {
+                assert(true);
+            } else {
+                assert(false);
+            }
+        }
+        assertEq(players.length, 2);
     }
 }

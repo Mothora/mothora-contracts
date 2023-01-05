@@ -2,17 +2,13 @@
   "name": "mothora-contracts",
   "version": "1.0.0",
   "description": "Mothora MVP Contracts",
-  "main": "hardhat.config.ts",
+  "main": "foundry.toml",
   "scripts": {
-    "test": "forge test -vv",
-    "node:hardhatevm": "hardhat node",
-    "compile": "hardhat compile",
-    "coverage": "hardhat coverage --testfiles 'test/*.test.ts'",
-    "airdrop": "hardhat run --network mumbai scripts/airdrop.ts",
-    "rewards": "hardhat run --network mumbai scripts/distributeRewards.ts"
+    "test": "forge test -vvv --gas-report",
+    "build": "forge build"
   },
   "keywords": [
-    "hardhat",
+    "foundry",
     "solidity",
     "web3"
   ],

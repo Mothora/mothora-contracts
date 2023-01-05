@@ -2,25 +2,17 @@
 pragma solidity ^0.8.17;
 
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IMothoraGame} from "./interfaces/IMothoraGame.sol";
 
 contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgradeable, UUPSUpgradeable {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
-
-    CountersUpgradeable.Counter public accountsCounter;
-
-    // this can be optmized to a single bytes element
-    uint256[4] public totalDAOMembers;
-
     bytes32 public constant MOTHORA_GAME_MASTER = keccak256("MOTHORA_GAME_MASTER");
 
     address[] private accountAddresses;
 
-    // Player address => Struct Account
-    mapping(address => Account) private playerAccounts;
+    // Player address => uint256 packed (dao 8bits, frozen 8bits)
+    mapping(address => uint256) private playerAccounts;
 
     // Bytes32 id => contract Address
     mapping(bytes32 => address) private gameProtocolAddresses;
@@ -30,9 +22,7 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
     bytes32 private constant ESSENCE_MODULE = "ESSENCE_MODULE"; // Fungible non-tradeable in-game currency
 
     modifier activeAccounts() {
-        uint256 id = getPlayerId(msg.sender);
-        bool frozen = getPlayerStatus(msg.sender);
-        if (id == 0 || frozen) revert ACCOUNT_NOT_ACTIVE();
+        _checkAccount();
         _;
     }
 
@@ -51,65 +41,71 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
     function _authorizeUpgrade(address) internal override onlyRole(MOTHORA_GAME_MASTER) {}
 
     function createAccount(uint256 dao) external override {
-        _joinDAO(dao);
+        (uint256 currentDAO, ) = getAccount(msg.sender);
+        if (currentDAO != 0) revert PLAYER_ALREADY_HAS_DAO();
+        if (dao == 0 || dao > 3) revert INVALID_DAO();
 
-        // currently using a contract id system
-        // Could be changed to an Unreal Engine id system? Check with Ivo
-        accountsCounter.increment();
+        _setAccount(msg.sender, dao, 0);
 
-        uint256 playerId = accountsCounter.current();
-
-        playerAccounts[msg.sender].id = playerId;
         accountAddresses.push(msg.sender);
 
-        emit AccountCreated(msg.sender, playerId);
+        emit AccountCreated(msg.sender, dao);
     }
 
     function changeFreezeStatus(address player, bool freezeStatus) public override onlyRole(MOTHORA_GAME_MASTER) {
-        Account storage playerAccount = playerAccounts[player];
-        if (playerAccount.id == 0) revert ACCOUNT_DOES_NOT_EXIST();
+        (uint256 DAO, ) = getAccount(player);
 
-        playerAccounts[player].frozen = freezeStatus;
+        if (DAO == 0) revert ACCOUNT_DOES_NOT_EXIST();
+
+        _setAccount(player, DAO, freezeStatus ? 1 : 0);
+
         emit AccountStatusChanged(player, freezeStatus);
     }
 
     function defect(uint256 newDAO) external override activeAccounts {
         if (newDAO == 0 || newDAO > 3) revert INVALID_DAO();
-        uint256 currentdao = getPlayerDAO(msg.sender);
+        (uint256 currentdao, ) = getAccount(msg.sender);
+
         if (newDAO == currentdao) revert CANNOT_DEFECT_TO_SAME_DAO();
 
-        Account storage playerAccount = playerAccounts[msg.sender];
-
-        totalDAOMembers[currentdao] -= 1;
-
-        if (newDAO == 1 && currentdao != 1) {
-            playerAccount.dao = DAO.SC;
-            totalDAOMembers[1] += 1;
-        } else if (newDAO == 2 && currentdao != 2) {
-            playerAccount.dao = DAO.EH;
-            totalDAOMembers[2] += 1;
-        } else if (newDAO == 3 && currentdao != 3) {
-            playerAccount.dao = DAO.TF;
-            totalDAOMembers[3] += 1;
-        }
+        _setAccount(msg.sender, newDAO, 0);
 
         emit Defect(msg.sender, newDAO);
     }
 
-    function getPlayerId(address player) public view override returns (uint256) {
-        return (playerAccounts[player].id);
+    function getAccount(address _player) public view override returns (uint256 dao, bool frozen) {
+        uint256 account = playerAccounts[_player];
+        dao = uint256(uint8(account));
+        frozen = uint256(uint8(account >> 8)) == 1 ? true : false;
     }
 
-    function getPlayerDAO(address player) public view override returns (uint256) {
-        return (uint256(playerAccounts[player].dao));
-    }
-
-    function getPlayerStatus(address player) public view override returns (bool) {
-        return playerAccounts[player].frozen;
-    }
-
-    function getAllActivePlayers() public view override returns (address[] memory) {
+    function getAllPlayers() external view override returns (address[] memory) {
         return accountAddresses;
+    }
+
+    function getAllActivePlayersByDao(uint256 dao) external view override returns (address[] memory) {
+        uint256 accountsNumber = accountAddresses.length;
+        address[] memory playersByDao = new address[](accountsNumber);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < accountsNumber; ++i) {
+            address account = accountAddresses[i];
+            (uint256 currentdao, bool frozen) = getAccount(account);
+            if (currentdao == dao && !frozen) {
+                playersByDao[count] = account;
+                unchecked {
+                    count++;
+                }
+            }
+        }
+        if (count != accountsNumber) {
+            //slither-disable-next-line assembly
+            assembly {
+                mstore(playersByDao, count)
+            }
+        }
+
+        return playersByDao;
     }
 
     function getAddress(bytes32 id) public view override returns (address) {
@@ -143,29 +139,19 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
         emit EssenceModuleUpdated(essenceModule);
     }
 
-    function unsafeInc(uint256 x) private pure returns (uint256) {
-        unchecked {
-            return x + 1;
-        }
+    function _setAccount(
+        address _player,
+        uint256 _dao,
+        uint256 frozen
+    ) internal {
+        uint256 account = _dao;
+        account |= frozen << 8;
+        playerAccounts[_player] = account;
     }
 
-    /**
-     * @dev Assigns a dao id to an account
-     **/
-    function _joinDAO(uint256 dao) internal {
-        Account storage playerAccount = playerAccounts[msg.sender];
-        if (playerAccount.dao != DAO.NONE) revert PLAYER_ALREADY_HAS_DAO();
-        if (dao == 0 || dao > 3) revert INVALID_DAO();
+    function _checkAccount() internal view {
+        (uint256 DAO, bool frozen) = getAccount(msg.sender);
 
-        if (dao == 1) {
-            playerAccount.dao = DAO.SC;
-            totalDAOMembers[1] += 1;
-        } else if (dao == 2) {
-            playerAccount.dao = DAO.EH;
-            totalDAOMembers[2] += 1;
-        } else if (dao == 3) {
-            playerAccount.dao = DAO.TF;
-            totalDAOMembers[3] += 1;
-        }
+        if (DAO == 0 || frozen) revert ACCOUNT_NOT_ACTIVE();
     }
 }
