@@ -40,6 +40,7 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
 
     function _authorizeUpgrade(address) internal override onlyRole(MOTHORA_GAME_MASTER) {}
 
+    // TODO add signature mechanism that controls account creation
     function createAccount(uint256 dao) external override {
         (uint256 currentDAO, ) = getAccount(msg.sender);
         if (currentDAO != 0) revert PLAYER_ALREADY_HAS_DAO();
@@ -62,6 +63,8 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
         emit AccountStatusChanged(player, freezeStatus);
     }
 
+    // todo add mechanic to pay a variable fee to defect
+    // payment is in
     function defect(uint256 newDAO) external override activeAccounts {
         if (newDAO == 0 || newDAO > 3) revert INVALID_DAO();
         (uint256 currentdao, ) = getAccount(msg.sender);
