@@ -4,7 +4,7 @@
   "description": "Mothora MVP Contracts",
   "main": "hardhat.config.ts",
   "scripts": {
-    "test": "hardhat compile && hardhat test ./test/*.test.ts",
+    "test": "forge test -vv",
     "node:hardhatevm": "hardhat node",
     "compile": "hardhat compile",
     "coverage": "hardhat coverage --testfiles 'test/*.test.ts'",

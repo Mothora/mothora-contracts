@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IMothoraGame} from "./interfaces/IMothoraGame.sol";
 
@@ -58,6 +58,7 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
         accountsCounter.increment();
 
         uint256 playerId = accountsCounter.current();
+
         playerAccounts[msg.sender].id = playerId;
         accountAddresses.push(msg.sender);
 
@@ -65,8 +66,7 @@ contract MothoraGame is Initializable, IMothoraGame, AccessControlEnumerableUpgr
     }
 
     function changeFreezeStatus(address player, bool freezeStatus) public override onlyRole(MOTHORA_GAME_MASTER) {
-        Account storage playerAccount = playerAccounts[msg.sender];
-
+        Account storage playerAccount = playerAccounts[player];
         if (playerAccount.id == 0) revert ACCOUNT_DOES_NOT_EXIST();
 
         playerAccounts[player].frozen = freezeStatus;

@@ -21,7 +21,7 @@ contract MothoraGameTest is BaseTest {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        Unit tests: Usage of MothoraGame Hub
+                        Unit tests: Account creation
     //////////////////////////////////////////////////////////////*/
 
     function test_revert_account_creation_invalid_dao() public {
@@ -54,5 +54,90 @@ contract MothoraGameTest is BaseTest {
 
         vm.expectRevert(IMothoraGame.PLAYER_ALREADY_HAS_DAO.selector);
         mothoraGame.createAccount(1);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        Unit tests: Defection
+    //////////////////////////////////////////////////////////////*/
+
+    function test_defect() public {
+        address player = address(0x123);
+
+        vm.prank(player);
+        mothoraGame.createAccount(1);
+
+        vm.prank(player);
+        mothoraGame.defect(2);
+
+        uint256 dao = mothoraGame.getPlayerDAO(player);
+        assertEq(dao, 2);
+
+        uint256 totalDAOMembers = mothoraGame.totalDAOMembers(1);
+        assertEq(totalDAOMembers, 0);
+
+        totalDAOMembers = mothoraGame.totalDAOMembers(2);
+        assertEq(totalDAOMembers, 1);
+    }
+
+    function test_revert_defect_twice_same_dao() public {
+        address player = address(0x123);
+
+        vm.startPrank(player);
+        mothoraGame.createAccount(1);
+
+        mothoraGame.defect(2);
+
+        vm.expectRevert(IMothoraGame.CANNOT_DEFECT_TO_SAME_DAO.selector);
+        mothoraGame.defect(2);
+
+        vm.stopPrank();
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                        Unit tests: Freezing accounts
+    //////////////////////////////////////////////////////////////*/
+
+    function test_freezing_account() public {
+        address player = address(0x123);
+
+        vm.prank(player);
+        mothoraGame.createAccount(1);
+
+        vm.prank(deployer);
+        mothoraGame.changeFreezeStatus(player, true);
+
+        bool freezeStatus = mothoraGame.getPlayerStatus(player);
+
+        assert(freezeStatus);
+    }
+
+    function test_revert_defect_while_frozen() public {
+        address player = address(0x123);
+
+        vm.prank(player);
+        mothoraGame.createAccount(1);
+
+        vm.prank(deployer);
+        mothoraGame.changeFreezeStatus(player, true);
+
+        vm.prank(player);
+        vm.expectRevert(IMothoraGame.ACCOUNT_NOT_ACTIVE.selector);
+        mothoraGame.defect(2);
+    }
+
+    function test_unfreezing_account() public {
+        address player = address(0x123);
+
+        vm.prank(player);
+        mothoraGame.createAccount(1);
+
+        vm.prank(deployer);
+        mothoraGame.changeFreezeStatus(player, true);
+
+        vm.prank(deployer);
+        mothoraGame.changeFreezeStatus(player, false);
+        bool freezeStatus = mothoraGame.getPlayerStatus(player);
+
+        assert(!freezeStatus);
     }
 }
