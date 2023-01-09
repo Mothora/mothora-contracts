@@ -1,50 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import {MothoraGame} from "../MothoraGame.sol";
-import {EssenceToken} from "./EssenceToken.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract Arena is Ownable {
-    event ArenaSessionPostgame();
-    event MothoraGameAddressUpdated(address indexed mothoraGameContractAddress);
+import {IArena} from "../interfaces/IArena.sol";
 
-    MothoraGame mothoraGameContract;
+contract Arena is IArena, Ownable {
+    mapping(uint256 => bytes32) private matchToMerkleRoot;
 
-    constructor(address mothoraGame) {
-        mothoraGameContract = MothoraGame(mothoraGame);
-        emit MothoraGameAddressUpdated(mothoraGame);
+    constructor() {}
+
+    function endMatch(uint256 matchId, bytes32 merkleRoot) external onlyOwner {
+        if (matchToMerkleRoot[matchId] != 0) revert MATCH_ALREADY_POSTED();
+        if (merkleRoot == 0) revert NULL_MERKLE_ROOT();
+
+        matchToMerkleRoot[matchId] = merkleRoot;
+
+        emit ArenaSessionPostgame(matchId, merkleRoot);
     }
 
-    /**
-     * @dev Ends a match by writting an onchain merkle tree proof. The emited event is used by the Mothora Game to allow the generation of signatures to mint essence
-     * @param proof The end of the match proof to write on-chain
-     * @param winners The addresses of the winners
-     * @param rewardAmounts The reward amounts
-     **/
-    function postgame(
-        bytes32 proof,
-        address[] calldata winners,
-        uint256[] calldata rewardAmounts
-    ) public onlyOwner {
-        // todo - do something here with the proof
-        emit ArenaSessionPostgame();
-    }
+    function checkValidityOfPlayerData(
+        uint256 matchId,
+        address player,
+        uint256 K,
+        uint256 D,
+        uint256 A,
+        bytes32[] calldata merkleProof
+    ) external view returns (bool valid) {
+        bytes32 merkleRoot = matchToMerkleRoot[matchId];
+        if (merkleRoot.length == 0) revert INVALID_MATCH_ID();
 
-    /**
-     * @dev Returns the address of the Mothora Game Hub Contract
-     * @return The Mothora Game address
-     **/
-    function getMothoraGame() public view returns (address) {
-        return address(mothoraGameContract);
-    }
+        bytes32 node = keccak256(abi.encodePacked(player, K, D, A));
+        if (!MerkleProof.verify(merkleProof, merkleRoot, node)) revert INVALID_PROOF();
 
-    /**
-     * @dev Updates the address of the Mothora Game
-     * @param mothoraGameContractAddress The new Mothora Game address
-     **/
-    function setMothoraGame(address mothoraGameContractAddress) external onlyOwner {
-        mothoraGameContract = MothoraGame(mothoraGameContractAddress);
-        emit MothoraGameAddressUpdated(mothoraGameContractAddress);
+        valid = true;
     }
 }
