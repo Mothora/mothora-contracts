@@ -7,7 +7,6 @@ import {EssenceToken} from "./EssenceToken.sol";
 
 contract Arena is Ownable {
     event ArenaSessionPostgame();
-    event RewardsDisbursed();
     event MothoraGameAddressUpdated(address indexed mothoraGameContractAddress);
 
     MothoraGame mothoraGameContract;
@@ -18,7 +17,7 @@ contract Arena is Ownable {
     }
 
     /**
-     * @dev Ends a match by writting an onchain merkle tree proof and disbursing rewards to winners
+     * @dev Ends a match by writting an onchain merkle tree proof. The emited event is used by the Mothora Game to allow the generation of signatures to mint essence
      * @param proof The end of the match proof to write on-chain
      * @param winners The addresses of the winners
      * @param rewardAmounts The reward amounts
@@ -29,22 +28,7 @@ contract Arena is Ownable {
         uint256[] calldata rewardAmounts
     ) public onlyOwner {
         // todo - do something here with the proof
-        disburseRewards(winners, rewardAmounts);
         emit ArenaSessionPostgame();
-    }
-
-    /**
-     * @dev Distributes rewards to the winners (general function)
-     * @dev If this is not a good approach, then do a pull based mint (with signature (performed by the backend))
-     * @param winners The addresses of the winners
-     * @param rewardAmounts The reward amounts
-     **/
-    function disburseRewards(address[] calldata winners, uint256[] calldata rewardAmounts) public onlyOwner {
-        // must take into account gas limits
-        for (uint256 i; i < winners.length; ++i) {
-            EssenceToken(mothoraGameContract.getEssenceModule()).mint(winners[i], rewardAmounts[i]);
-        }
-        emit RewardsDisbursed();
     }
 
     /**

@@ -6,6 +6,23 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft
 
 interface IEssenceToken is IERC20, IERC20Permit {
     /**
+     *  @notice The body of a request to mint Essence
+     *
+     *  @param minter The minter of essence
+     *  @param quantity The quantity of essence to mint
+     *  @param validityStartTimestamp The unix timestamp after which the request is valid.
+     *  @param validityEndTimestamp The unix timestamp after which the request expires.
+     *  @param uid A unique identifier for the request.
+     */
+    struct MintRequest {
+        address minter;
+        uint256 quantity;
+        uint128 validityStartTimestamp;
+        uint128 validityEndTimestamp;
+        bytes32 uid;
+    }
+
+    /**
      * @dev Tokens can only be minted addresses other than those with TRANSFER_GOVERNOR role
      */
     error MINT_TO_SELF();
@@ -36,15 +53,42 @@ interface IEssenceToken is IERC20, IERC20Permit {
     error TRANSFER_DISALLOWED();
 
     /**
+     * @dev User not recovered correctly
+     */
+    error INVALID_SIGNATURE();
+
+    /**
+     * @dev Mint request has expired
+     */
+    error REQUEST_EXPIRED();
+
+    /**
+     * @dev Essence tokens recipient is address 0
+     */
+    error RECIPIENT_UNDEFINED();
+
+    /**
+     * @dev Essence tokens to mint is 0
+     */
+    error ZERO_QUANTITY();
+
+    /**
      * @dev Unpauses all token transfers.
      */
     function allowTransfers() external;
 
     /**
-     * @dev Players are minted essence when Performance is displayed in the game (winning matches, for e.g)
-     * @dev Arena contract will typically be the one to call this function
-     * @param account The owner of the tokens to burn
-     * @param amount The amount of tokens to burn
+     * @dev Players are minted Essence when Performance is displayed in the game (winning matches, for e.g)
+     * @dev The backend will generate a signature which a player can take to reward himself with Essence
+     * @param _req       The struct with the data to mint Essence
+     * @param _signature The signature to verify the request.
      */
-    function mint(address account, uint256 amount) external;
+    function mint(MintRequest calldata _req, bytes calldata _signature) external;
+
+    /**
+     * @dev Verifies that a mint request is signed by an account holding TRANSFER_GOVERNOR (at the time of the function call).
+     * @param _req       The struct with the data to mint Essence
+     * @param _signature The signature to verify the request.
+     */
+    function verify(MintRequest calldata _req, bytes calldata _signature) external view returns (bool, address);
 }
