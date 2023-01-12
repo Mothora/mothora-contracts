@@ -35,6 +35,11 @@ yarn build
 yarn test
 ```
 
+### Ideas
+
+https://github.com/ZeframLou/playpen/blob/main/src/ERC20StakingPool.sol
+https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol
+
 ## License
 
 MIT
