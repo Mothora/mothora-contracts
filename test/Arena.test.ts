@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import hre from 'hardhat';
 import { makeMerkleTree } from '../utils/merkletree';
-import { makeUsers } from '../utils/data';
+import { makeUsers, K, D, A, essenceEarned } from '../utils/data';
 import { Arena } from '../typechain-types';
 const { ethers, deployments } = hre;
 
@@ -39,31 +39,33 @@ describe('Arena', function () {
       );
     });
 
-    it('Verifies a valid player KDA', async function () {
+    it('Verifies a valid player proof', async function () {
       const valid = await arena
         .connect(this.users.bob)
         .checkValidityOfPlayerData(
           1,
           this.users.bob.getAddress(),
-          20,
-          3,
-          6,
+          K.bob,
+          D.bob,
+          A.bob,
+          essenceEarned.bob,
           this.merkleTreeData.proofs[await this.users.bob.getAddress()]
         );
 
       expect(valid).to.equal(true);
     });
 
-    it('Returns false on invalid player KDA', async function () {
+    it('Returns false on invalid player proof', async function () {
       await expect(
         arena
           .connect(this.users.bob)
           .checkValidityOfPlayerData(
             1,
             this.users.bob.getAddress(),
-            19,
-            3,
-            6,
+            K.bob + 1,
+            D.bob,
+            A.bob,
+            essenceEarned.bob,
             this.merkleTreeData.proofs[await this.users.bob.getAddress()]
           )
       ).to.be.revertedWithCustomError(arena, 'INVALID_PROOF');

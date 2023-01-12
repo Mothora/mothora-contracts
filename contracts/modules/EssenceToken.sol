@@ -37,7 +37,7 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, EIP712, ERC20 {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        External functions
+                    Mutex and mint logic
     //////////////////////////////////////////////////////////////*/
 
     function allowTransfers() external override {
@@ -55,18 +55,25 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, EIP712, ERC20 {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        Public functions
+                    Mint verification logic Management Logic
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Verifies that a mint request is signed by an account holding TRANSFER_GOVERNOR (at the time of the function call).
     function verify(MintRequest calldata _req, bytes calldata _signature) public view override returns (bool, address) {
-        address signer = _recoverAddress(_req, _signature);
+        address signer = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    TYPEHASH,
+                    _req.minter,
+                    _req.quantity,
+                    _req.validityStartTimestamp,
+                    _req.validityEndTimestamp,
+                    _req.uid
+                )
+            )
+        ).recover(_signature);
         return (hasRole(TRANSFER_GOVERNOR, signer), signer);
     }
-
-    /*///////////////////////////////////////////////////////////////
-                        Internal functions
-    //////////////////////////////////////////////////////////////*/
 
     /// @dev Verifies that a mint request is valid.
     function _verifyRequest(MintRequest calldata _req, bytes calldata _signature) internal view returns (address) {
@@ -80,24 +87,9 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, EIP712, ERC20 {
         return signer;
     }
 
-    /// @dev Returns the address of the signer of the mint request.
-    function _recoverAddress(MintRequest calldata _req, bytes calldata _signature) internal view returns (address) {
-        return _hashTypedDataV4(keccak256(_encodeRequest(_req))).recover(_signature);
-    }
-
-    /// @dev Resolves 'stack too deep' error in `recoverAddress`.
-    function _encodeRequest(MintRequest calldata _req) internal pure returns (bytes memory) {
-        return
-            abi.encode(
-                TYPEHASH,
-                _req.minter,
-                _req.quantity,
-                _req.validityStartTimestamp,
-                _req.validityEndTimestamp,
-                _req.uid
-            );
-    }
-
+    /*///////////////////////////////////////////////////////////////
+                        Hooks
+    //////////////////////////////////////////////////////////////*/
     /**
      * @dev See {ERC20-_beforeTokenTransfer}
      * Requirements: the contract must not be paused OR transfer must be initiated by owner

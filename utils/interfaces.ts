@@ -11,6 +11,7 @@ export interface Input {
   K?: number;
   D?: number;
   A?: number;
+  essenceEarned?: number;
 }
 export type Inputs = Input[];
 

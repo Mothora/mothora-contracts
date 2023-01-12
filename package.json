@@ -6,7 +6,7 @@
   "scripts": {
     "test": "forge test -vvv --gas-report",
     "test:hardhat": "hardhat test",
-    "test:full": "yarn test && yarn test:hardhat",
+    "test:ci": "forge test --gas-report > gasreport.ansi && hardhat test",
     "build": "forge build"
   },
   "keywords": [
@@ -61,6 +61,5 @@
     "typechain": "^8.1.1",
     "typescript": "^4.9.4"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }

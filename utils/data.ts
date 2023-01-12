@@ -21,6 +21,12 @@ export const A: UsersScore = {
   carol: 1,
 };
 
+export const essenceEarned: UsersScore = {
+  alice: 100,
+  bob: 250,
+  carol: 30,
+};
+
 export const makeUsers = async (): Promise<Users> => {
   const signers = await ethers.getSigners();
   return usernames.reduce((acc: Users, name: string, index) => {
@@ -31,7 +37,13 @@ export const makeUsers = async (): Promise<Users> => {
   }, {} as Users);
 };
 
-export const makeInputs = async (usernames: string[], K: UsersScore, D: UsersScore, A: UsersScore): Promise<Inputs> => {
+export const makeInputs = async (
+  usernames: string[],
+  K: UsersScore,
+  D: UsersScore,
+  A: UsersScore,
+  essenceEarned: UsersScore
+): Promise<Inputs> => {
   const signers = await ethers.getSigners();
 
   return usernames
@@ -43,6 +55,7 @@ export const makeInputs = async (usernames: string[], K: UsersScore, D: UsersSco
         K: K[name],
         D: D[name],
         A: A[name],
+        essenceEarned: essenceEarned[name],
       };
     });
 };
