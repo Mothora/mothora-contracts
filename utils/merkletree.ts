@@ -1,15 +1,15 @@
 import { ethers } from 'hardhat';
 import keccak256 from 'keccak256';
 import { MerkleTree } from 'merkletreejs';
-import { makeInputs, usernames, K, D, A } from './data';
+import { makeInputs, usernames, K, D, A, essenceEarned } from './data';
 
 import { Leaves, MerkleTreeData, Input, Inputs, Proofs } from './interfaces';
 
 const makeLeaves = (users: Inputs): Leaves => {
   const leaves = users.reduce((acc: Leaves, x: Input) => {
     const leaf = ethers.utils.solidityKeccak256(
-      ['address', 'uint256', 'uint256', 'uint256'],
-      [x.address, x.K, x.D, x.A]
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256'],
+      [x.address, x.K, x.D, x.A, x.essenceEarned]
     );
     return {
       ...acc,
@@ -34,7 +34,7 @@ const makeProofs = (merkleTree: MerkleTree, users: Inputs, leaves: Leaves) => {
 };
 
 export const makeMerkleTree = async (): Promise<MerkleTreeData> => {
-  const inputs = await makeInputs(usernames, K, D, A);
+  const inputs = await makeInputs(usernames, K, D, A, essenceEarned);
 
   const leaves = makeLeaves(inputs);
 

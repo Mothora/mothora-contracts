@@ -1,0 +1,29 @@
+Compiling 88 files with 0.8.17
+Solc 0.8.17 finished in 5.32s
+Compiler run successful
+
+Running 9 tests for src/test/MothoraGame.t.sol:MothoraGameTest
+[32m[PASS][0m test_account_creation_shadow_council() (gas: 105229)
+[32m[PASS][0m test_defect() (gas: 113685)
+[32m[PASS][0m test_freezing_account() (gas: 108206)
+[32m[PASS][0m test_return_all_accounts_in_dao() (gas: 283954)
+[32m[PASS][0m test_revert_account_creation_invalid_dao() (gas: 35163)
+[32m[PASS][0m test_revert_already_has_faction() (gas: 103595)
+[32m[PASS][0m test_revert_defect_twice_same_dao() (gas: 108524)
+[32m[PASS][0m test_revert_defect_while_frozen() (gas: 108740)
+[32m[PASS][0m test_unfreezing_account() (gas: 112323)
+Test result: [32mok[0m. 9 passed; 0 failed; finished in 2.47ms
+| contracts/MothoraGame.sol:MothoraGame contract |                 |        |        |        |         |
+|------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                | Deployment Size |        |        |        |         |
+| 1942204                                        | 9871            |        |        |        |         |
+| Function Name                                  | min             | avg    | median | max    | # calls |
+| changeFreezeStatus                             | 2965            | 2965   | 2965   | 2965   | 5       |
+| createAccount                                  | 953             | 63640  | 81323  | 81323  | 13      |
+| defect                                         | 653             | 2841   | 2974   | 4763   | 4       |
+| getAccount                                     | 758             | 765    | 768    | 768    | 4       |
+| getAllActivePlayersByDao                       | 1626            | 2436   | 1837   | 4446   | 4       |
+| initialize                                     | 184970          | 184970 | 184970 | 184970 | 9       |
+
+
+

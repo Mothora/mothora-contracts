@@ -9,6 +9,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('Arena', {
     from: deployer,
     log: true,
+    args: ['https://api.mothora.xyz/endpoint'],
   });
 };
 export default func;
