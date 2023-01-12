@@ -39,6 +39,8 @@ jobs:
           # due to non-deterministic fuzzing (but still use pseudo-random fuzzing seeds)
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          MNEMONIC: ${{ secrets.MNEMONIC }}
+          ALCHEMY_TOKEN: ${{ secrets.ALCHEMY_TOKEN }}
 
       - name: Compare gas reports
         uses: Rubilmax/foundry-gas-diff@v3.13.2
