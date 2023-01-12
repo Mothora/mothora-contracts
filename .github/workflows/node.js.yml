@@ -32,13 +32,17 @@ jobs:
             nightly
             # Add any step generating a gas report to a temporary file named gasreport.ansi. For example:
 
-      - name: Run tests
-        run: yarn test:ci # <- this file name should be unique in your repository!
+      - name: Run foundry tests
+        run: forge test --gas-report > gasreport.ansi # <- this file name should be unique in your repository!
         env:
           # make fuzzing semi-deterministic to avoid noisy gas cost estimation
           # due to non-deterministic fuzzing (but still use pseudo-random fuzzing seeds)
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Run hardhat tests
+        run: yarn test:hardhat
+        env:
           MNEMONIC: ${{ secrets.MNEMONIC }}
           ALCHEMY_TOKEN: ${{ secrets.ALCHEMY_TOKEN }}
 
