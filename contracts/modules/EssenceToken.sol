@@ -3,11 +3,12 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import {IEssenceToken} from "../interfaces/IEssenceToken.sol";
+import {CoreErrors} from "../libraries/CoreErrors.sol";
 
-contract EssenceToken is IEssenceToken, AccessControlEnumerable, ERC20Permit {
+contract EssenceToken is IEssenceToken, AccessControlEnumerable, EIP712, ERC20 {
     using ECDSA for bytes32;
 
     bytes32 private constant TYPEHASH =
@@ -23,7 +24,7 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, ERC20Permit {
      */
     constructor(address _arena, address _essenceReactor)
         ERC20("Essence Token", "ESSENCE")
-        ERC20Permit("Essence Token")
+        EIP712("Essence Token", "1")
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
@@ -49,6 +50,7 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, ERC20Permit {
     function mint(MintRequest calldata _req, bytes calldata _signature) external override {
         _verifyRequest(_req, _signature);
         // todo - check if needed to save uuid to prevent replay
+        // todo - validate user node from Arena.sol?
         _mint(_msgSender(), _req.quantity);
     }
 
@@ -69,10 +71,10 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, ERC20Permit {
     /// @dev Verifies that a mint request is valid.
     function _verifyRequest(MintRequest calldata _req, bytes calldata _signature) internal view returns (address) {
         (bool success, address signer) = verify(_req, _signature);
-        if (!success) revert INVALID_SIGNATURE();
+        if (!success) revert CoreErrors.INVALID_SIGNATURE();
         if (_req.validityStartTimestamp > block.timestamp || _req.validityEndTimestamp < block.timestamp)
-            revert REQUEST_EXPIRED();
-        if (_req.minter == address(0)) revert RECIPIENT_UNDEFINED();
+            revert CoreErrors.REQUEST_EXPIRED();
+        if (_req.minter == address(0)) revert CoreErrors.RECIPIENT_UNDEFINED();
         if (_req.quantity == 0) revert ZERO_QUANTITY();
 
         return signer;

@@ -2,9 +2,8 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
-interface IEssenceToken is IERC20, IERC20Permit {
+interface IEssenceToken is IERC20 {
     /**
      *  @notice The body of a request to mint Essence
      *
@@ -51,21 +50,6 @@ interface IEssenceToken is IERC20, IERC20Permit {
      * @dev Token can only be transfered if contract is unpaused OR transfer is initiated by contract with ability to transfer
      */
     error TRANSFER_DISALLOWED();
-
-    /**
-     * @dev User not recovered correctly
-     */
-    error INVALID_SIGNATURE();
-
-    /**
-     * @dev Mint request has expired
-     */
-    error REQUEST_EXPIRED();
-
-    /**
-     * @dev Essence tokens recipient is address 0
-     */
-    error RECIPIENT_UNDEFINED();
 
     /**
      * @dev Essence tokens to mint is 0

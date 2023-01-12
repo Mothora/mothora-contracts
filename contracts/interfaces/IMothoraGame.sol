@@ -2,16 +2,54 @@
 pragma solidity ^0.8.17;
 
 interface IMothoraGame {
+    /**
+     *  @notice The body of a request to create an Account
+     *  @param targetAddress The target creator of an account
+     *  @param dao The selected dao id
+     *  @param validityStartTimestamp The unix timestamp after which the request is valid.
+     *  @param validityEndTimestamp The unix timestamp after which the request expires.
+     *  @param uid A unique identifier for the request.
+     */
+    struct NewAccountRequest {
+        address targetAddress;
+        uint256 dao;
+        uint128 validityStartTimestamp;
+        uint128 validityEndTimestamp;
+        bytes32 uid;
+    }
+
     /******************
     /  EVENTS
     /******************/
-
+    /**
+     * @dev Emitted when an account is created
+     */
     event AccountCreated(address indexed player, uint256 dao);
+
+    /**
+     * @dev Emitted when an account is frozen or unfrozen
+     */
     event AccountStatusChanged(address indexed player, bool freezeStatus);
+
+    /**
+     * @dev Emitted when a player defects to a new DAO
+     */
     event Defect(address indexed player, uint256 newDAO);
-    event ArenaModuleUpdated(address indexed arenaModule);
-    event DAOModuleUpdated(address indexed daoModule);
-    event EssenceModuleUpdated(address indexed essenceModule);
+
+    /**
+     * @dev Emitted when a module is updated
+     */
+    event ModuleUpdated(bytes32 indexed id, address indexed module);
+
+    /**
+     * @dev Emitted when the defect fee is updated
+     */
+    event DefectFeeUpdated(uint256 indexed defectFee);
+
+    /**
+     * @dev Emitted when the collected fees are withdrawn
+     */
+    event FeesWithdrawn();
 
     /******************
     /  ERRORS
@@ -42,15 +80,26 @@ interface IMothoraGame {
      */
     error PLAYER_ALREADY_HAS_DAO();
 
+    /**
+     * @dev If the defect fee is invalid
+     */
+    error INVALID_DEFECT_FEE();
+
+    /**
+     * @dev If the defect fee withdrawal fails
+     */
+    error ETH_TRANSFER_FAILED();
+
     /******************
     /  FUNCTIONS
     /******************/
 
     /**
      * @dev Creates an account for a player
-     * @param dao The selected dao id
+     * @param _req       The struct with the data to create an account
+     * @param _signature The signature to verify the request.
      */
-    function createAccount(uint256 dao) external;
+    function createAccount(NewAccountRequest calldata _req, bytes calldata _signature) external;
 
     /**
      * @dev Freezes an account for a player
@@ -63,13 +112,13 @@ interface IMothoraGame {
      * @dev A player can defect from a specific DAO to another
      * @param newDAO The DAO to defect to
      */
-    function defect(uint256 newDAO) external;
+    function defect(uint256 newDAO) external payable;
 
     /**
      * @dev Returns a player's DAO and freeze status
-     * @param _player The address of the player
+     * @param player The address of the player
      */
-    function getAccount(address _player) external view returns (uint256 dao, bool frozen);
+    function getAccount(address player) external view returns (uint256 dao, bool frozen);
 
     /**
      * @dev Returns all players
@@ -85,44 +134,33 @@ interface IMothoraGame {
     function getAllActivePlayersByDao(uint256 dao) external view returns (address[] memory);
 
     /**
-     * @dev Returns an address by id
+     * @dev Returns a module by id
      * @return The address
      */
-    function getAddress(bytes32 id) external view returns (address);
+    function getModule(bytes32 id) external view returns (address);
 
     /**
-     * @dev Returns the address of the ARENA module
-     * @return The ARENA address
+     * @dev Updates a module by id
+     * @param id The id of the address
+     * @param module The new address
      */
-    function getArenaModule() external view returns (address);
+    function setModule(bytes32 id, address module) external;
 
     /**
-     * @dev Updates the address of the ARENA module
-     * @param arenaModule The new ARENA address
+     * @dev Sets the defect fee
+     * @param defectFee The defect fee
      */
-    function setArenaModule(address arenaModule) external;
+    function setDefectFee(uint256 defectFee) external;
 
     /**
-     * @dev Returns the address of the DAO Module
-     * @return The DAO address
+     * @dev Withdraws the collected fees
      */
-    function getDAOModule() external view returns (address);
+    function withdrawCollectedFees() external;
 
     /**
-     * @dev Updates the address of the DAO module
-     * @param daoModule The new DAO module address
+     * @dev Verifies that an account creation request is signed by an account holding MOTHORA_GAME_MASTER (at the time of the function call).
+     * @param _req       The struct with the data to create an account
+     * @param _signature The signature to verify the request.
      */
-    function setDAOModule(address daoModule) external;
-
-    /**
-     * @dev Returns the address of the ESSENCE module
-     * @return The ESSENCE address
-     */
-    function getEssenceModule() external view returns (address);
-
-    /**
-     * @dev Updates the address of the ESSENCE
-     * @param essenceModule The new ESSENCE address
-     */
-    function setEssenceModule(address essenceModule) external;
+    function verify(NewAccountRequest calldata _req, bytes calldata _signature) external view returns (bool, address);
 }

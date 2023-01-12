@@ -9,7 +9,12 @@ import {IArena} from "../interfaces/IArena.sol";
 contract Arena is IArena, Ownable {
     mapping(uint256 => bytes32) private matchToMerkleRoot;
 
-    constructor() {}
+    // string = 'https://api.mothra.gg/arena/v1/matches/{matchId}/postgame'
+    string public metadata;
+
+    constructor(string memory _metadata) Ownable() {
+        metadata = _metadata;
+    }
 
     function endMatch(uint256 matchId, bytes32 merkleRoot) external onlyOwner {
         if (matchToMerkleRoot[matchId] != 0) revert MATCH_ALREADY_POSTED();
