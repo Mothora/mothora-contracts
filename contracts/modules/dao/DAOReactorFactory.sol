@@ -2,20 +2,15 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import {IDAOReactor} from "../../interfaces/IDAOReactor.sol";
-
+import {IDAOReactorFactory} from "../../interfaces/IDAOReactorFactory.sol";
 import {IRewardsPipeline} from "../../interfaces/IRewardsPipeline.sol";
 
-contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
+contract DAOReactorFactory is IDAOReactorFactory, AccessControlEnumerableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev master admin, manages other roles and can change core config
@@ -33,13 +28,6 @@ contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
     /// @dev EssenceModuleUpdated token addr
     IERC20 public essence;
     IRewardsPipeline public rewardsPipeline;
-
-    event DAOReactorDeployed(address daoReactor);
-    event EssenceModuleUpdated(IERC20 essence);
-    event RewardsPipelineModuleUpdated(IRewardsPipeline rewardsPipeline);
-
-    error DAOReactorExists();
-    error NotDAOReactor();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -70,7 +58,11 @@ contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
         daoReactorBeacon = new UpgradeableBeacon(_daoReactorImpl);
     }
 
-    function getDAOReactor(uint256 _index) external view returns (address) {
+    /*///////////////////////////////////////////////////////////////
+                    Get DAO reactors logic
+    //////////////////////////////////////////////////////////////*/
+
+    function getDAOReactor(uint256 _index) external view override returns (address) {
         if (daoReactors.length() == 0) {
             return address(0);
         } else {
@@ -78,16 +70,19 @@ contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
         }
     }
 
-    function getAllDAOReactors() external view returns (address[] memory) {
+    function getAllDAOReactors() external view override returns (address[] memory) {
         return daoReactors.values();
     }
 
-    function getAllDAOReactorsLength() external view returns (uint256) {
+    function getAllDAOReactorsLength() external view override returns (uint256) {
         return daoReactors.length();
     }
 
-    function deployDAOReactor(address _admin) external onlyRole(DRF_DEPLOYER) {
-        bytes memory daoReactorData = abi.encodeCall(IDAOReactor.init, (_admin));
+    /*///////////////////////////////////////////////////////////////
+                    Deploying DAO reactors logic
+    //////////////////////////////////////////////////////////////*/
+    function deployDAOReactor(address _admin) external override onlyRole(DRF_DEPLOYER) {
+        bytes memory daoReactorData = abi.encodeCall(IDAOReactor.initialize, (_admin));
         address daoReactor = address(new BeaconProxy(address(daoReactorBeacon), daoReactorData));
 
         if (!daoReactors.add(daoReactor)) revert DAOReactorExists();
@@ -96,7 +91,7 @@ contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
         emit DAOReactorDeployed(daoReactor);
     }
 
-    function enableDAOReactor(IDAOReactor _daoReactor) external onlyRole(DRF_DEPLOYER) {
+    function enableDAOReactor(IDAOReactor _daoReactor) external override onlyRole(DRF_DEPLOYER) {
         _daoReactor.callUpdateRewards();
 
         // only DAOReactors deployed by this factory can be enabled and re-added to the list
@@ -106,7 +101,7 @@ contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
         daoReactors.add(address(_daoReactor));
     }
 
-    function disableDAOReactor(IDAOReactor _daoReactor) external onlyRole(DRF_DEPLOYER) {
+    function disableDAOReactor(IDAOReactor _daoReactor) external override onlyRole(DRF_DEPLOYER) {
         _daoReactor.callUpdateRewards();
 
         // only active daoReactor in the list can be disabled
@@ -115,20 +110,22 @@ contract DAOReactorFactory is AccessControlEnumerableUpgradeable {
         _daoReactor.disable();
     }
 
-    // ADMIN
+    /*///////////////////////////////////////////////////////////////
+                    Admin logic
+    //////////////////////////////////////////////////////////////*/
 
-    function setEssenceModule(IERC20 _essence) external onlyRole(DRF_ADMIN) {
+    function setEssenceModule(IERC20 _essence) external override onlyRole(DRF_ADMIN) {
         essence = _essence;
         emit EssenceModuleUpdated(_essence);
     }
 
-    function setRewardsModule(IRewardsPipeline _rewardsPipeline) external onlyRole(DRF_ADMIN) {
+    function setRewardsModule(IRewardsPipeline _rewardsPipeline) external override onlyRole(DRF_ADMIN) {
         rewardsPipeline = _rewardsPipeline;
         emit RewardsPipelineModuleUpdated(_rewardsPipeline);
     }
 
     /// @dev Upgrades the daoReactor beacon to a new implementation.
-    function upgradeDAOReactorTo(address _newImplementation) external onlyRole(DRF_BEACON_ADMIN) {
+    function upgradeDAOReactorTo(address _newImplementation) external override onlyRole(DRF_BEACON_ADMIN) {
         daoReactorBeacon.upgradeTo(_newImplementation);
     }
 }

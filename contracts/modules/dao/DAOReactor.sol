@@ -23,9 +23,7 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
 
     IDAOReactorFactory public factory;
 
-    bool public unlockAll;
     bool public disabled;
-
     uint256 public totalRewardsEarned;
     uint256 public accRewardPerShare;
     uint256 public totalSRepToken;
@@ -41,28 +39,10 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
     /// @notice user => deposit index
     mapping(address => uint256) public currentId;
 
-    event Deposit(address indexed user, uint256 indexed index, uint256 amount, uint256 lock);
-    event Withdraw(address indexed user, uint256 indexed index, uint256 amount);
-    event Harvest(address indexed user, uint256 amount);
-    event LogUpdateRewards(uint256 distributedRewards, uint256 sRepSupply, uint256 accRewardPerShare);
-    event Enable();
-    event Disable();
-    event UnlockAll(bool value);
-
-    error MaxUserGlobalDeposit();
-    error MaxTotalDeposit();
-    error Disabled();
-    error OnlyFactory();
-    error ZeroAmount();
-    error StillLocked();
-    error AmountTooBig();
-    error RunOnBank();
-    error DepositDoesNotExists();
-
     modifier updateRewards() {
         uint256 sRepSupply = totalSRepToken;
         if (sRepSupply > 0) {
-            uint256 distributedRewards = factory.rewards().requestRewards();
+            uint256 distributedRewards = factory.rewardsPipeline().requestRewards();
             if (distributedRewards > 0) {
                 totalRewardsEarned += distributedRewards;
                 accRewardPerShare += (distributedRewards * Constant.ONE) / sRepSupply;
@@ -78,7 +58,6 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
 
         _;
     }
-
     modifier onlyFactory() {
         if (msg.sender != address(factory)) revert OnlyFactory();
 
@@ -88,7 +67,7 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function init(address _admin) external initializer {
+    function initialize(address _admin) external initializer {
         __AccessControlEnumerable_init();
 
         factory = IDAOReactorFactory(msg.sender);
@@ -97,21 +76,25 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
         _grantRole(DAO_REACTOR_ADMIN, _admin);
     }
 
-    function getAllUserDepositIds(address _user) external view returns (uint256[] memory) {
+    /*///////////////////////////////////////////////////////////////
+                    Get deposit and reward logic
+    //////////////////////////////////////////////////////////////*/
+
+    function getAllUserDepositIds(address _user) external view override returns (uint256[] memory) {
         return allUserDepositIds[_user].values();
     }
 
-    function getAllUserDepositIdsLength(address _user) external view returns (uint256) {
+    function getAllUserDepositIdsLength(address _user) external view override returns (uint256) {
         return allUserDepositIds[_user].length();
     }
 
-    function pendingRewardsAll(address _user) external view returns (uint256 pending) {
+    function pendingRewardsAll(address _user) external view override returns (uint256 pending) {
         GlobalUserDeposit storage userGlobalDeposit = getUserGlobalDeposit[_user];
         uint256 _accRewardPerShare = accRewardPerShare;
         uint256 sRepSupply = totalSRepToken;
 
         if (sRepSupply > 0) {
-            uint256 pendingRewards = factory.rewards().getPendingRewards(address(this));
+            uint256 pendingRewards = factory.rewardsPipeline().getPendingRewards(address(this));
             _accRewardPerShare += (pendingRewards * Constant.ONE) / sRepSupply;
         }
 
@@ -124,33 +107,15 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
         }
     }
 
-    function getMaxWithdrawableAmount(address _user) public view returns (uint256 withdrawable) {
-        uint256[] memory depositIds = allUserDepositIds[_user].values();
-
-        for (uint256 i = 0; i < depositIds.length; i++) {
-            uint256 depositId = depositIds[i];
-            UserInfo memory user = userInfo[_user][depositId];
-
-            withdrawable += user.depositAmount;
-        }
-    }
-
-    /// @dev utility function to invoke updateRewards modifier
-    function callUpdateRewards() public updateRewards returns (bool) {
+    function callUpdateRewards() public override updateRewards returns (bool) {
         return true;
     }
 
-    function enable() external onlyFactory {
-        disabled = false;
-        emit Enable();
-    }
+    /*///////////////////////////////////////////////////////////////
+                    Deposit logic
+    //////////////////////////////////////////////////////////////*/
 
-    function disable() external onlyFactory {
-        disabled = true;
-        emit Disable();
-    }
-
-    function deposit(uint256 _amount, uint256 _timelockId) external updateRewards whenEnabled {
+    function deposit(uint256 _amount) external override updateRewards whenEnabled {
         (UserInfo storage user, uint256 depositId) = _addDeposit(msg.sender);
 
         uint256 sRepAmount = _amount + (_amount * sRepRatio) / Constant.ONE;
@@ -164,8 +129,26 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
 
         factory.essence().safeTransferFrom(msg.sender, address(this), _amount);
 
-        emit Deposit(msg.sender, depositId, _amount, _timelockId);
+        emit Deposit(msg.sender, depositId, _amount);
     }
+
+    /*///////////////////////////////////////////////////////////////
+                    Management
+    //////////////////////////////////////////////////////////////*/
+
+    function enable() external onlyFactory {
+        disabled = false;
+        emit Enable();
+    }
+
+    function disable() external onlyFactory {
+        disabled = true;
+        emit Disable();
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                    Internal / Helper functions
+    //////////////////////////////////////////////////////////////*/
 
     function _recalculateGlobalSRep(
         address _user,
@@ -192,15 +175,5 @@ contract DAOReactor is IDAOReactor, Initializable, AccessControlEnumerableUpgrad
         newDepositId = ++currentId[_user];
         allUserDepositIds[_user].add(newDepositId);
         user = userInfo[_user][newDepositId];
-    }
-
-    function _removeDeposit(address _user, uint256 _depositId) internal {
-        if (!allUserDepositIds[_user].remove(_depositId)) revert DepositDoesNotExists();
-    }
-
-    /// @notice EMERGENCY ONLY
-    function setUnlockAll(bool _value) external onlyRole(DAO_REACTOR_ADMIN) {
-        unlockAll = _value;
-        emit UnlockAll(_value);
     }
 }

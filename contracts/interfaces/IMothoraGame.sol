@@ -2,6 +2,10 @@
 pragma solidity ^0.8.17;
 
 interface IMothoraGame {
+    /******************
+    /  STRUCTS
+    /******************/
+
     /**
      *  @notice The body of a request to create an Account
      *  @param targetAddress The target creator of an account
@@ -21,6 +25,7 @@ interface IMothoraGame {
     /******************
     /  EVENTS
     /******************/
+
     /**
      * @dev Emitted when an account is created
      */
