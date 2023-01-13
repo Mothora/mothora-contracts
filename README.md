@@ -9,7 +9,7 @@ Connected to the HUB are the following core modules:
 
 ## Get started
 
-0. Set `PRIVATE_KEY`env variabvle
+0. Set `PRIVATE_KEY` env variable
 
 1. Install submodules
 
