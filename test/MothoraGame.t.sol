@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
-import {MothoraGame} from "contracts/MothoraGame.sol";
-import {IMothoraGame} from "contracts/interfaces/IMothoraGame.sol";
+import {MothoraGame} from "src/MothoraGame.sol";
+import {IMothoraGame} from "src/interfaces/IMothoraGame.sol";
 
 // Test imports
 import {MockERC20} from "./mocks/MockERC20.sol";

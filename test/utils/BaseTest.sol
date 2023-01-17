@@ -8,7 +8,9 @@ import "./Wallet.sol";
 import "../mocks/MockERC20.sol";
 import "../mocks/MockERC721.sol";
 import "../mocks/MockERC1155.sol";
-import {MothoraGame} from "contracts/MothoraGame.sol";
+import {MothoraGame} from "src/MothoraGame.sol";
+import {Arena} from "src/modules/Arena.sol";
+import {UUPSProxy} from "src/utils/UUPSProxy.sol";
 
 abstract contract BaseTest is DSTest, Test {
     string public constant NAME = "NAME";
@@ -18,6 +20,7 @@ abstract contract BaseTest is DSTest, Test {
     MockERC20 public erc20;
     MockERC721 public erc721;
     MockERC1155 public erc1155;
+    UUPSProxy proxy;
 
     address public deployer = address(0x8fb52e325C3145A2A7Cd4A04A6F4146017ADD6c0);
     uint256 public privateKey = vm.envUint("PRIVATE_KEY");
@@ -40,18 +43,22 @@ abstract contract BaseTest is DSTest, Test {
         vm.stopPrank();
 
         address mothoraGameImplementation = address(new MothoraGame());
-        deployContractProxy("MothoraGame", mothoraGameImplementation, abi.encodeCall(MothoraGame.initialize, ()));
+        deployUUPSProxy("MothoraGame", mothoraGameImplementation, abi.encodeCall(MothoraGame.initialize, ()));
+
+        vm.prank(deployer);
+        address arena = address(new Arena("ipfs://"));
+        contracts[bytes32(bytes("Arena"))] = arena;
     }
 
-    function deployContractProxy(
+    function deployUUPSProxy(
         string memory _contractType,
         address _implementation,
         bytes memory _initializer
     ) public returns (address proxyAddress) {
         vm.startPrank(deployer);
 
-        proxyAddress = Clones.clone(_implementation);
-
+        proxy = new UUPSProxy(_implementation, "");
+        proxyAddress = address(proxy);
         if (_initializer.length > 0) {
             Address.functionCall(proxyAddress, _initializer);
         }

@@ -1,8 +1,6 @@
 import { PinataUtils } from './pinata-utils';
 import { CID } from 'multiformats/cid';
-import { isHexString, hexlify } from '@ethersproject/bytes';
-import { BytesLike } from 'ethers';
-import { v4 as uuidv4 } from 'uuid';
+import { BytesLike, utils } from 'ethers';
 
 export interface IBlueprint {
   name: string;
@@ -45,6 +43,6 @@ export const pin_blueprint_and_return_base16cid = async (blueprint: IBlueprint):
   const jsonResponse = await PinataUtils.pinJsonWithPinata(blueprint);
   // convert v1 CID to its base16 representation and save
   const base16_cid = CID.parse(jsonResponse.IpfsHash).bytes;
-  const base16_core: BytesLike = hexlify(base16_cid);
+  const base16_core: BytesLike = utils.hexlify(base16_cid);
   return base16_core;
 };

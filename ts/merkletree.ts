@@ -1,8 +1,7 @@
-import { ethers } from 'hardhat';
+import ethers from 'ethers';
 import keccak256 from 'keccak256';
 import { MerkleTree } from 'merkletreejs';
 import { makeInputs, usernames, K, D, A, essenceEarned } from './data';
-
 import { Leaves, MerkleTreeData, Input, Inputs, Proofs } from './interfaces';
 
 const makeLeaves = (users: Inputs): Leaves => {

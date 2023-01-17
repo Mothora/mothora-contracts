@@ -7,33 +7,40 @@ Connected to the HUB are the following core modules:
 - `EssenceToken.sol` - ERC20 Essence token (non transfereable)
 - `Arena.sol` - Manages postmatch results and their verification
 
-## Get started
+## Getting started
 
-0. Set `PRIVATE_KEY` env variable
+1. Set `PRIVATE_KEY` env variable
 
-1. Install submodules
+2. Install submodules and dependencies
 
-```
-git submodules update
-```
+Or, if your repo already exists, run:
 
-2. Install dependencies
-
-```
-yarn
+```sh
+git submodule update --init --recursive
+forge install
 ```
 
-3. Build with Foundry
+### First time with Forge/Foundry?
 
-```
-yarn build
+See the official Foundry installation [instructions](https://github.com/foundry-rs/foundry/blob/master/README.md#installation).
+
+Then, install the [foundry](https://github.com/foundry-rs/foundry) toolchain installer (`foundryup`) with:
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
 ```
 
-4. Test contracts via Foundry
+Now that you've installed the `foundryup` binary,
+anytime you need to get the latest `forge` or `cast` binaries,
+you can run `foundryup`.
 
+So, simply execute:
+
+```bash
+foundryup
 ```
-yarn test
-```
+
+🎉 Foundry is installed! 🎉
 
 ### Ideas
 
