@@ -7,6 +7,12 @@ Connected to the HUB are the following core modules:
 - `EssenceToken.sol` - ERC20 Essence token (non transfereable)
 - `Arena.sol` - Manages postmatch results and their verification
 
+## Currently deployed contracts
+
+- MothoraGame - Arbitrum Goerli - https://goerli.arbiscan.io/address/0xb2a4ae57b6b7aeccbd381cbbdc3fa4491df15411
+
+open endpoint: https://goerli-rollup.arbitrum.io/rpc
+
 ## Getting started
 
 1. Set `PRIVATE_KEY` env variable
