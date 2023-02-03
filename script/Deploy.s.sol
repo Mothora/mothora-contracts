@@ -2,21 +2,17 @@
 pragma solidity ^0.8.17;
 
 import {Script} from "forge-std/Script.sol";
-import {Arena} from "src/modules/Arena.sol";
 import {MothoraGame} from "src/MothoraGame.sol";
 import {UUPSProxy} from "src/utils/UUPSProxy.sol";
 
 /// @notice A very simple deployment script
 contract Deploy is Script {
     UUPSProxy proxy;
-    MothoraGame wrappedProxyV1;
 
     /// @notice The main script entrypoint
-    /// @return arena The arena contract
-    function run() external returns (Arena arena) {
+    /// @return wrappedProxyV1 The MothoraGame contract
+    function run() external returns (MothoraGame wrappedProxyV1) {
         vm.startBroadcast();
-        arena = new Arena("https://api.mothora.xyz/endpoint");
-
         MothoraGame mothoraGameImplementation = new MothoraGame();
 
         // deploy proxy contract and point it to implementation
