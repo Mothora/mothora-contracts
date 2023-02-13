@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.18;
 
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {EnumerableSetUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IStreamSystem} from "../interfaces/IStreamSystem.sol";
 import {IStream} from "../interfaces/IStream.sol";
 
@@ -21,7 +21,7 @@ import {IStream} from "../interfaces/IStream.sol";
 /// • Enable/Disable registered stream addresses as callbacks, by calling setCallback().
 /// • Withdraw an arbitrary reward token amount to an arbitrary address, by calling withdrawReward().
 /// • Set the reward token address to an arbitrary address, by calling setRewardToken().
-contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUpgradeable {
+contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUpgradeable, UUPSUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     using SafeERC20Upgradeable for IERC20Upgradeable;
     uint256 public constant PRECISION = 1e18;
@@ -67,7 +67,12 @@ contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUp
     event Withdraw(address to, uint256 amount);
     event CallbackSet(address stream, bool value);
 
-    function init(address _reward) external initializer {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _reward) external initializer {
         reward = IERC20Upgradeable(_reward);
 
         _setRoleAdmin(STREAM_SYSTEM_ADMIN_ROLE, STREAM_SYSTEM_ADMIN_ROLE);
@@ -75,6 +80,8 @@ contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUp
 
         __AccessControlEnumerable_init();
     }
+
+    function _authorizeUpgrade(address) internal override onlyRole(STREAM_SYSTEM_ADMIN_ROLE) {}
 
     function requestRewards() public virtual returns (uint256 rewardsPaid) {
         CoinStream storage stream = streamConfig[msg.sender];

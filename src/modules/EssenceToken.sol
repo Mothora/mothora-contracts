@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.18;
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -22,15 +22,14 @@ contract EssenceToken is IEssenceToken, AccessControlEnumerable, EIP712, ERC20 {
     /**
      * @dev Will mint 100 million tokens and transfer ownership to the owner (which should be the Essence Reactor)
      */
-    constructor(address _arena, address _essenceReactor)
-        ERC20("Essence Token", "ESSENCE")
-        EIP712("Essence Token", "1")
-    {
+    constructor(address _arena) ERC20("Essence Token", "ESSENCE") EIP712("Essence Token", "1") {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         // Arena and Essence Reactor are both transfer governors (can mint and burn)
         _setupRole(TRANSFER_GOVERNOR, _arena);
-        _setupRole(TRANSFER_GOVERNOR, _essenceReactor);
+
+        /// @dev TODO set this role later in its own setter, perhaps the 3 Dao Reactors addresses directly
+        /// _setupRole(TRANSFER_GOVERNOR, _daoReactorFactory);
 
         // Pauser will be the deployer of this contract (the Admin)
         _setupRole(PAUSER_ROLE, _msgSender());

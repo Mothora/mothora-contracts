@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.18;
 
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -12,9 +13,11 @@ import {IDAOReactorFactory} from "../interfaces/IDAOReactorFactory.sol";
 import {IDAOReactor} from "../interfaces/IDAOReactor.sol";
 import {IStreamSystem} from "../interfaces/IStreamSystem.sol";
 
+import {IRewardsPipeline} from "../interfaces/IRewardsPipeline.sol";
+
 import {Constant} from "../libraries/Constant.sol";
 
-contract Rewards is AccessControlEnumerableUpgradeable {
+contract RewardsPipeline is IRewardsPipeline, Initializable, AccessControlEnumerableUpgradeable, UUPSUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
@@ -44,9 +47,11 @@ contract Rewards is AccessControlEnumerableUpgradeable {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
-    function init(
+    function initialize(
         address _admin,
         IStreamSystem _streamSystem,
         IDAOReactorFactory _daoReactorFactory
@@ -62,6 +67,8 @@ contract Rewards is AccessControlEnumerableUpgradeable {
         daoReactorFactory = _daoReactorFactory;
         emit DAOReactorFactory(_daoReactorFactory);
     }
+
+    function _authorizeUpgrade(address) internal override onlyRole(REWARDS_ADMIN) {}
 
     /// @dev Returns shares of SRep for all daoReactors. To get the shares of SRep
     ///      for given daoReactor do:
@@ -145,7 +152,7 @@ contract Rewards is AccessControlEnumerableUpgradeable {
         rewardsBalance[daoReactor].unpaid = 0;
         rewardsBalance[daoReactor].paid += rewardsPaid;
 
-        daoReactorFactory.essence().safeTransfer(daoReactor, rewardsPaid);
+        daoReactorFactory.rewardToken().safeTransfer(daoReactor, rewardsPaid);
         emit RewardsPaid(daoReactor, rewardsPaid, rewardsBalance[daoReactor].paid);
     }
 
