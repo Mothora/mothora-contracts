@@ -1,5 +1,5 @@
 [profile.default]
-solc-version = "0.8.17"
+solc-version = "0.8.18"
 gas_reports = ["MothoraGame"]
 libraries = []
 optimizer = true
@@ -9,7 +9,8 @@ remappings = [
   '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts/',
   '@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts/',
   '@std=lib/forge-std/src/',
-  '@murky=lib/murky/src/'
+  '@murky=lib/murky/src/',
+  '@solmate=lib/solmate',
 ]
 verbosity = 0
 ffi = true

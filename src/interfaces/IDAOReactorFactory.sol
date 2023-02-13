@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -22,6 +22,13 @@ interface IDAOReactorFactory {
      * @param essence The address of the new essence module
      */
     event EssenceModuleUpdated(IERC20 essence);
+
+    /**
+    /**
+     * @dev Emitted when the erewardToken is updated
+     * @param rewardToken The address of the new rewardToken 
+     */
+    event RewardTokenUpdated(IERC20 rewardToken);
 
     /**
      * @dev Emitted when the rewards module is updated
@@ -51,6 +58,11 @@ interface IDAOReactorFactory {
      * @dev Returns essence ierc20 token
      */
     function essence() external view returns (IERC20);
+
+    /**
+     * @dev Returns the reward token
+     */
+    function rewardToken() external view returns (IERC20);
 
     /**
      * @dev Returns rewards pipeline contract
@@ -95,6 +107,12 @@ interface IDAOReactorFactory {
      * @param _essence The address of the essence module
      */
     function setEssenceModule(IERC20 _essence) external;
+
+    /**
+     * @dev Sets the rewardToken module
+     * @param _rewardToken The address of the reward token module
+     */
+    function setRewardToken(IERC20 _rewardToken) external;
 
     /**
      * @dev Sets the rewards module

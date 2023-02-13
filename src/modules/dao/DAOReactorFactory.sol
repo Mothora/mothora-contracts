@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.18;
 
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {IDAOReactor} from "../../interfaces/IDAOReactor.sol";
 import {IDAOReactorFactory} from "../../interfaces/IDAOReactorFactory.sol";
 import {IRewardsPipeline} from "../../interfaces/IRewardsPipeline.sol";
 
-contract DAOReactorFactory is IDAOReactorFactory, AccessControlEnumerableUpgradeable {
+contract DAOReactorFactory is IDAOReactorFactory, Initializable, AccessControlEnumerableUpgradeable, UUPSUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev master admin, manages other roles and can change core config
@@ -20,28 +24,36 @@ contract DAOReactorFactory is IDAOReactorFactory, AccessControlEnumerableUpgrade
     /// @dev can upgrade proxy implementation for daoReactor and nftHandler
     bytes32 public constant DRF_BEACON_ADMIN = keccak256("DRF_BEACON_ADMIN");
 
+    /// @dev Reward token addr
+    IERC20 public rewardToken;
+    /// @dev Essence token addr
+    IERC20 public essence;
+    IRewardsPipeline public rewardsPipeline;
+
     UpgradeableBeacon public daoReactorBeacon;
 
     EnumerableSet.AddressSet private daoReactors;
     mapping(address => bool) public deployedDAOReactors;
 
-    /// @dev EssenceModuleUpdated token addr
-    IERC20 public essence;
-    IRewardsPipeline public rewardsPipeline;
-
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
-    function init(
+    function initialize(
+        address _admin,
+        IERC20 _rewardToken,
         IERC20 _essence,
         IRewardsPipeline _rewardsPipeline,
-        address _admin,
         address _daoReactorImpl
     ) external initializer {
         __AccessControlEnumerable_init();
 
         essence = _essence;
         emit EssenceModuleUpdated(_essence);
+
+        rewardToken = _rewardToken;
+        emit RewardTokenUpdated(_rewardToken);
 
         rewardsPipeline = _rewardsPipeline;
         emit RewardsPipelineModuleUpdated(_rewardsPipeline);
@@ -57,6 +69,8 @@ contract DAOReactorFactory is IDAOReactorFactory, AccessControlEnumerableUpgrade
 
         daoReactorBeacon = new UpgradeableBeacon(_daoReactorImpl);
     }
+
+    function _authorizeUpgrade(address) internal override onlyRole(DRF_ADMIN) {}
 
     /*///////////////////////////////////////////////////////////////
                     Get DAO reactors logic
@@ -117,6 +131,11 @@ contract DAOReactorFactory is IDAOReactorFactory, AccessControlEnumerableUpgrade
     function setEssenceModule(IERC20 _essence) external override onlyRole(DRF_ADMIN) {
         essence = _essence;
         emit EssenceModuleUpdated(_essence);
+    }
+
+    function setRewardToken(IERC20 _rewardToken) external override onlyRole(DRF_ADMIN) {
+        rewardToken = _rewardToken;
+        emit RewardTokenUpdated(_rewardToken);
     }
 
     function setRewardsModule(IRewardsPipeline _rewardsPipeline) external override onlyRole(DRF_ADMIN) {
