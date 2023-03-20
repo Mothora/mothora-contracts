@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {AccessControlEnumerableUpgradeable} from "@openzeppelin-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import {ECDSAUpgradeable} from "@openzeppelin-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {Initializable} from "@openzeppelin-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IMothoraGame} from "./interfaces/IMothoraGame.sol";
 import {CoreErrors} from "./libraries/CoreErrors.sol";
 
@@ -141,12 +141,10 @@ contract MothoraGame is
                     Account creation verification logic
     //////////////////////////////////////////////////////////////*/
 
-    function verify(NewAccountRequest calldata _req, bytes calldata _signature)
-        public
-        view
-        override
-        returns (bool, address)
-    {
+    function verify(
+        NewAccountRequest calldata _req,
+        bytes calldata _signature
+    ) public view override returns (bool, address) {
         address signer = _hashTypedDataV4(
             keccak256(
                 abi.encode(
@@ -163,11 +161,10 @@ contract MothoraGame is
     }
 
     /// @dev Verifies that a mint request is valid.
-    function _verifyRequest(NewAccountRequest calldata _req, bytes calldata _signature)
-        internal
-        view
-        returns (address)
-    {
+    function _verifyRequest(
+        NewAccountRequest calldata _req,
+        bytes calldata _signature
+    ) internal view returns (address) {
         (bool success, address signer) = verify(_req, _signature);
         if (!success) revert CoreErrors.INVALID_SIGNATURE();
         if (_req.validityStartTimestamp > block.timestamp || _req.validityEndTimestamp < block.timestamp)
@@ -212,11 +209,7 @@ contract MothoraGame is
     /*///////////////////////////////////////////////////////////////
                     Internal/ Helper functions
     //////////////////////////////////////////////////////////////*/
-    function _setAccount(
-        address _player,
-        uint256 _dao,
-        uint256 frozen
-    ) internal {
+    function _setAccount(address _player, uint256 _dao, uint256 frozen) internal {
         uint256 account = _dao;
         account |= frozen << 8;
         playerAccounts[_player] = account;

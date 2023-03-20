@@ -1,0 +1,6 @@
+@ds=lib/ds-test/src/
+@solmate=lib/solmate/src/
+@std=lib/forge-std/src/
+@clones=lib/clones-with-immutable-args/src/
+@openzeppelin=lib/openzeppelin-contracts/contracts/
+@openzeppelin-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts/

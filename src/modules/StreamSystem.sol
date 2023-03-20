@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {EnumerableSetUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
-import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {IERC20Upgradeable} from "@openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {EnumerableSetUpgradeable} from "@openzeppelin-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import {AccessControlEnumerableUpgradeable} from "@openzeppelin-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import {Initializable} from "@openzeppelin-upgradeable/proxy/utils/Initializable.sol";
 
 import {IStreamSystem} from "../interfaces/IStreamSystem.sol";
 import {IStream} from "../interfaces/IStream.sol";
@@ -95,13 +95,10 @@ contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUp
         emit RewardsPaid(msg.sender, rewardsPaid, stream.paid);
     }
 
-    function grantTokenToStream(address _stream, uint256 _amount)
-        public
-        virtual
-        streamExists(_stream)
-        streamActive(_stream)
-        callbackStream(_stream)
-    {
+    function grantTokenToStream(
+        address _stream,
+        uint256 _amount
+    ) public virtual streamExists(_stream) streamActive(_stream) callbackStream(_stream) {
         _fundStream(_stream, _amount);
 
         reward.safeTransferFrom(msg.sender, address(this), _amount);
@@ -194,7 +191,10 @@ contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUp
         }
     }
 
-    function fundStream(address _stream, uint256 _amount)
+    function fundStream(
+        address _stream,
+        uint256 _amount
+    )
         external
         virtual
         onlyRole(STREAM_SYSTEM_ADMIN_ROLE)
@@ -206,7 +206,10 @@ contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUp
         emit StreamFunded(_stream, _amount);
     }
 
-    function defundStream(address _stream, uint256 _amount)
+    function defundStream(
+        address _stream,
+        uint256 _amount
+    )
         external
         virtual
         onlyRole(STREAM_SYSTEM_ADMIN_ROLE)
@@ -256,26 +259,19 @@ contract StreamSystem is IStreamSystem, Initializable, AccessControlEnumerableUp
         emit StreamTimeUpdated(_stream, _startTimestamp, _endTimestamp);
     }
 
-    function removeStream(address _stream)
-        external
-        virtual
-        onlyRole(STREAM_SYSTEM_ADMIN_ROLE)
-        streamExists(_stream)
-        callbackStream(_stream)
-    {
+    function removeStream(
+        address _stream
+    ) external virtual onlyRole(STREAM_SYSTEM_ADMIN_ROLE) streamExists(_stream) callbackStream(_stream) {
         if (streams.remove(_stream)) {
             delete streamConfig[_stream];
             emit StreamRemoved(_stream);
         }
     }
 
-    function setCallback(address _stream, bool _value)
-        public
-        virtual
-        onlyRole(STREAM_SYSTEM_ADMIN_ROLE)
-        streamExists(_stream)
-        callbackStream(_stream)
-    {
+    function setCallback(
+        address _stream,
+        bool _value
+    ) public virtual onlyRole(STREAM_SYSTEM_ADMIN_ROLE) streamExists(_stream) callbackStream(_stream) {
         callbackRegistry[_stream] = _value;
         emit CallbackSet(_stream, _value);
     }

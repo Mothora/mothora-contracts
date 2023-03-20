@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import {AccessControlEnumerableUpgradeable} from "@openzeppelin-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -74,7 +74,9 @@ contract Rewards is AccessControlEnumerableUpgradeable {
     /// @return daoReactorTotalSRep total SRep for each daoReactor in `allActiveDAOReactors` array
     /// @return totalSRep
     /// @return targetIndex index of `_targetDAOReactor` in `allActiveDAOReactors` array
-    function getDAOReactorShares(address _targetDAOReactor)
+    function getDAOReactorShares(
+        address _targetDAOReactor
+    )
         public
         view
         returns (
