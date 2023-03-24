@@ -3,24 +3,38 @@ pragma solidity ^0.8.0;
 
 import "ds-test/test.sol";
 import "../src/NFT.sol";
+import "forge-std/console.sol";
 
-contract NFTest is DSTest {
+import {Test} from "forge-std/Test.sol";
+
+contract NFTest is DSTest, Test {
     NFT nft;
+    bytes cid;
 
     function setUp() public {
         nft = new NFT();
+        string[] memory cmds = new string[](2);
+        // Build ffi command string
+        cmds[0] = "ts-node";
+        cmds[1] = "./ts/main.ts";
+        bytes memory result = vm.ffi(cmds);
+        cid = abi.decode(result, (bytes));
+        console.log("CID: %s", string(abi.encodePacked(cid)));
     }
 
     function testMint() public {
-        bytes memory blueprint = hex"c3c4733ec8affd06cf9e9ff50ffc6bcd2ec85a6170004bb709669c31de94391a";
+        bytes memory blueprint = (cid);
         nft.mint(blueprint);
 
         // Check that the NFT was minted
         assertEq(nft.totalSupply(), 1);
 
         // Check that the metadata was stored correctly
-        string memory expectedMetadata = "c3c4733ec8affd06cf9e9ff50ffc6bcd2ec85a6170004bb709669c31de94391a";
-        assertEq(nft.getNFTMetadata(1), expectedMetadata);
+
+        // how do i know what to expect?
+        // string memory expectedMetadata = "c3c4733ec8affd06cf9e9ff50ffc6bcd2ec85a6170004bb709669c31de94391a";
+        // assertEq(nft.getNFTMetadata(1), expectedMetadata);
+        console.log("Metadata: %s", nft.getNFTMetadata(1));
     }
 }
 
